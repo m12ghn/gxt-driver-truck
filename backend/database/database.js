@@ -1,5 +1,13 @@
 require("dotenv").config();
 
+// pg is required by Sequelize's postgres dialect, but Sequelize loads it
+// dynamically (require(variableName) instead of require("pg")). Vercel's
+// serverless bundler only packages dependencies it can see via a static
+// require(), so without this explicit line, "pg" gets left out of the
+// deployed function and the app crashes at startup with:
+//   "Error: Please install pg package manually"
+require("pg");
+
 const { Sequelize } = require("sequelize");
 
 // ==============================
