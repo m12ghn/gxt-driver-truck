@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("crypto");
 
 const supabase = require("./supabaseClient");
 
@@ -9,7 +9,7 @@ const BUCKET = process.env.SUPABASE_BUCKET || "gxt-uploads";
 // "/uploads/..." như trước đây.
 async function uploadBufferToSupabase(file, folder) {
   const ext = (file.originalname?.split(".").pop() || "jpg").toLowerCase();
-  const objectPath = `${folder}/${Date.now()}-${uuidv4()}.${ext}`;
+  const objectPath = `${folder}/${Date.now()}-${randomUUID()}.${ext}`;
 
   const { error } = await supabase.storage
     .from(BUCKET)
