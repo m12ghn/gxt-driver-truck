@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://REPLACE-WITH-BACKEND-URL.vercel.app/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://gxt-driver-truck-git-main-m12ghn-9152s-projects.vercel.app/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
