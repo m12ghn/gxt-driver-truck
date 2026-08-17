@@ -9,6 +9,19 @@ exports.adminLogin = async (req, res) => {
 
     const { taiKhoan, matKhau } = req.body;
 
+    // TEMP DEBUG — reveals only lengths/booleans, never actual values.
+    // Remove this block once the SUPER_ADMIN login mismatch is solved.
+    console.log("DEBUG adminLogin:", {
+      inputUserLen: taiKhoan?.length,
+      inputPassLen: matKhau?.length,
+      envUserSet: process.env.SUPER_ADMIN_USER !== undefined,
+      envUserLen: process.env.SUPER_ADMIN_USER?.length,
+      envPassSet: process.env.SUPER_ADMIN_PASS !== undefined,
+      envPassLen: process.env.SUPER_ADMIN_PASS?.length,
+      userMatches: taiKhoan === process.env.SUPER_ADMIN_USER,
+      passMatches: matKhau === process.env.SUPER_ADMIN_PASS,
+    });
+
     // ==========================
     // SUPER ADMIN
     // ==========================
