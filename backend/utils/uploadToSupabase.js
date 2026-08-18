@@ -29,4 +29,26 @@ async function uploadBufferToSupabase(file, folder) {
   return data.publicUrl;
 }
 
-module.exports = { uploadBufferToSupabase };
+async function createSignedUpload(folder) {
+  const safeFolder = String(folder || "checkin").replace(/[^a-z0-9-]/gi, "");
+  const objectPath = `${safeFolder || "checkin"}/${Date.now()}-${randomUUID()}.jpg`;
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUploadUrl(objectPath);
+
+  if (error) {
+    throw new Error(`Tạo signed upload URL thất bại: ${error.message}`);
+  }
+
+  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(objectPath);
+
+  return {
+    path: objectPath,
+    signedUrl: data.signedUrl,
+    token: data.token,
+    publicUrl: pub.publicUrl,
+  };
+}
+
+module.exports = { uploadBufferToSupabase, createSignedUpload };

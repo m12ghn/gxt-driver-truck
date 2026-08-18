@@ -6,6 +6,7 @@ const driverPortalController = require("../controllers/driverPortalController");
 const {
   makeUploader,
   makeIncidentUploader,
+  optionalMultipart,
 } = require("../middlewares/uploadDriverPhotos");
 const attachUser = require("../middlewares/attachUser");
 
@@ -31,7 +32,7 @@ router.get(
 // ==============================
 router.put(
   "/:id/driver-checkin",
-  makeUploader("checkin"),
+  optionalMultipart(makeUploader()),
   driverPortalController.driverCheckIn
 );
 
@@ -41,7 +42,7 @@ router.put(
 // ==============================
 router.put(
   "/:id/driver-checkout",
-  makeUploader("checkout"),
+  optionalMultipart(makeUploader()),
   driverPortalController.driverCheckOut
 );
 
@@ -50,7 +51,7 @@ router.put(
 // ==============================
 router.post(
   "/:id/incidents",
-  makeIncidentUploader(),
+  optionalMultipart(makeIncidentUploader()),
   driverPortalController.createIncident
 );
 

@@ -29,4 +29,15 @@ router.post(
   uploadController.importExcel
 );
 
+router.post("/signed", uploadController.createSignedUpload);
+
+router.post(
+  "/driver-photo",
+  multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+  }).single("photo"),
+  uploadController.uploadDriverPhoto
+);
+
 module.exports = router;

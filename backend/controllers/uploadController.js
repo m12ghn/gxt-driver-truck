@@ -7,6 +7,10 @@ const Driver = require("../models/Driver");
 const {
   markOverdueAssignments,
 } = require("../utils/assignmentHelpers");
+const {
+  uploadBufferToSupabase,
+  createSignedUpload,
+} = require("../utils/uploadToSupabase");
 
 // ========================================
 // IMPORT EXCEL
@@ -150,6 +154,57 @@ exports.uploadCheckInImage = async (req, res) => {
     });
 
   } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+const ALLOWED_FOLDERS = ["checkin", "checkout", "incidents"];
+
+exports.createSignedUpload = async (req, res) => {
+  try {
+    const folder = ALLOWED_FOLDERS.includes(req.body?.folder)
+      ? req.body.folder
+      : "checkin";
+
+    const signed = await createSignedUpload(folder);
+
+    res.json({
+      success: true,
+      ...signed,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.uploadDriverPhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Chưa chọn ảnh.",
+      });
+    }
+
+    const folder = ALLOWED_FOLDERS.includes(req.body?.folder)
+      ? req.body.folder
+      : "checkin";
+
+    const url = await uploadBufferToSupabase(req.file, folder);
+
+    res.json({
+      success: true,
+      url,
+    });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({
       success: false,
       message: err.message,

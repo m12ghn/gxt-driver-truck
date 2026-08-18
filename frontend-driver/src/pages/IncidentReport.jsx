@@ -19,6 +19,8 @@ import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 
 import CameraCapture from "../components/CameraCapture";
 import { reportIncident } from "../api/assignmentApi";
+import { uploadErrorMessage } from "../utils/compressImage";
+import { uploadDriverPhoto } from "../utils/uploadPhoto";
 
 const MAX_PHOTOS = 4;
 
@@ -32,6 +34,7 @@ export default function IncidentReport() {
   const [photos, setPhotos] = useState([]);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState("");
 
   function handlePhotoConfirm(blob) {
     setPhotos((prev) => {
@@ -85,33 +88,36 @@ export default function IncidentReport() {
     }
 
     setSubmitting(true);
+    setSubmitStatus("Đang tải ảnh...");
 
     try {
       const gps = await getCurrentPosition();
-      const formData = new FormData();
+      const photoUrls = [];
 
-      formData.append("msnv", user.msnv);
-      formData.append("loai", loai);
-      formData.append("moTa", moTa.trim());
-
-      if (gps.latitude != null) {
-        formData.append("latitude", String(gps.latitude));
-        formData.append("longitude", String(gps.longitude));
+      for (let i = 0; i < photos.length; i++) {
+        setSubmitStatus(`Đang tải ảnh ${i + 1}/${photos.length}...`);
+        photoUrls.push(await uploadDriverPhoto(photos[i].blob, "incidents"));
       }
 
-      photos.forEach((p, i) => {
-        formData.append("photos", p.blob, `incident-${i + 1}.jpg`);
-      });
+      setSubmitStatus("Đang gửi báo cáo...");
 
-      await reportIncident(id, formData);
+      await reportIncident(id, {
+        msnv: user.msnv,
+        loai,
+        moTa: moTa.trim(),
+        latitude: gps.latitude,
+        longitude: gps.longitude,
+        photoUrls,
+      });
 
       alert("Đã gửi báo cáo sự cố.");
       navigate("/");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Gửi báo cáo thất bại.");
+      alert(uploadErrorMessage(err, "Gửi báo cáo thất bại."));
     } finally {
       setSubmitting(false);
+      setSubmitStatus("");
     }
   }
 
@@ -252,7 +258,7 @@ export default function IncidentReport() {
             "&:hover": { bgcolor: "#e65100" },
           }}
         >
-          {submitting ? "Đang gửi..." : "Gửi báo cáo"}
+          {submitting ? submitStatus || "Đang gửi..." : "Gửi báo cáo"}
         </Button>
       </Paper>
     </Box>
