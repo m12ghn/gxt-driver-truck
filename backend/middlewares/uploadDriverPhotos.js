@@ -14,7 +14,10 @@ const PHOTO_FIELDS = [
 const storage = multer.memoryStorage();
 
 function makeUploader() {
-  const upload = multer({ storage });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+  });
 
   return upload.fields(
     PHOTO_FIELDS.map((name) => ({ name, maxCount: 1 }))
@@ -23,7 +26,25 @@ function makeUploader() {
 
 // Upload ảnh báo cáo sự cố dọc đường (1–4 ảnh)
 function makeIncidentUploader() {
-  return multer({ storage }).array("photos", 4);
+  return multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+  }).array("photos", 4);
 }
 
-module.exports = { makeUploader, makeIncidentUploader, PHOTO_FIELDS };
+function optionalMultipart(uploader) {
+  return (req, res, next) => {
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("multipart/form-data")) {
+      return uploader(req, res, next);
+    }
+    next();
+  };
+}
+
+module.exports = {
+  makeUploader,
+  makeIncidentUploader,
+  optionalMultipart,
+  PHOTO_FIELDS,
+};

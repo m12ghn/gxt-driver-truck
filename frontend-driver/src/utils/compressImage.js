@@ -1,11 +1,10 @@
 // Phone camera photos are often 2–8MB each. Vercel serverless rejects
-// request bodies over ~4.5MB (HTTP 413), so 6 check-in photos fail.
-// Shrink + JPEG-encode before upload.
+// request bodies over ~4.5MB (HTTP 413). Always return a JPEG blob.
 
-const MAX_EDGE = 1280;
-const MAX_BYTES = 350 * 1024;
-const START_QUALITY = 0.72;
-const MIN_QUALITY = 0.4;
+const MAX_EDGE = 1024;
+const MAX_BYTES = 220 * 1024;
+const START_QUALITY = 0.7;
+const MIN_QUALITY = 0.35;
 
 function loadImageFallback(file) {
   return new Promise((resolve, reject) => {
@@ -29,8 +28,22 @@ function canvasToBlob(canvas, quality) {
   });
 }
 
+function drawToCanvas(source, edge) {
+  const scale = Math.min(1, edge / Math.max(source.width, source.height));
+  const width = Math.max(1, Math.round(source.width * scale));
+  const height = Math.max(1, Math.round(source.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(source, 0, 0, width, height);
+  return canvas;
+}
+
 export async function compressImage(file) {
-  if (!file) return file;
+  if (!file) {
+    throw new Error("Thiếu ảnh để nén.");
+  }
 
   let source;
   try {
@@ -39,34 +52,43 @@ export async function compressImage(file) {
     source = await loadImageFallback(file);
   }
 
-  const scale = Math.min(1, MAX_EDGE / Math.max(source.width, source.height));
-  const width = Math.max(1, Math.round(source.width * scale));
-  const height = Math.max(1, Math.round(source.height * scale));
+  let edge = MAX_EDGE;
+  let best = null;
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(source, 0, 0, width, height);
-  source.close?.();
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const canvas = drawToCanvas(source, edge);
+    let quality = START_QUALITY;
+    let blob = await canvasToBlob(canvas, quality);
 
-  let quality = START_QUALITY;
-  let blob = await canvasToBlob(canvas, quality);
+    while (blob && blob.size > MAX_BYTES && quality > MIN_QUALITY) {
+      quality = Math.max(MIN_QUALITY, quality - 0.1);
+      blob = await canvasToBlob(canvas, quality);
+    }
 
-  while (blob && blob.size > MAX_BYTES && quality > MIN_QUALITY) {
-    quality = Math.max(MIN_QUALITY, quality - 0.1);
-    blob = await canvasToBlob(canvas, quality);
+    if (blob && (!best || blob.size < best.size)) {
+      best = blob;
+    }
+
+    if (blob && blob.size <= MAX_BYTES) {
+      source.close?.();
+      return blob;
+    }
+
+    edge = Math.round(edge * 0.75);
   }
 
-  if (!blob) return file;
-  if (file.size && blob.size >= file.size) return file;
+  source.close?.();
 
-  return blob;
+  if (!best) {
+    throw new Error("Không nén được ảnh. Vui lòng chụp lại.");
+  }
+
+  return best;
 }
 
 export function uploadErrorMessage(err, fallback) {
   if (err.response?.status === 413) {
-    return "Ảnh quá nặng, server không nhận được. Vui lòng thử lại (ảnh sẽ được nén tự động).";
+    return "Ảnh quá nặng, server không nhận được. Vui lòng tải lại trang rồi chụp lại.";
   }
 
   return err.response?.data?.message || err.message || fallback;

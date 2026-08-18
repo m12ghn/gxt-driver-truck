@@ -15,6 +15,58 @@ const {
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
 
+function isForceGps(value) {
+  return value === true || value === "true";
+}
+
+function isHttpUrl(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value.trim());
+}
+
+function parseBodyPhotos(bodyPhotos) {
+  if (!bodyPhotos) return null;
+
+  if (typeof bodyPhotos === "string") {
+    try {
+      return JSON.parse(bodyPhotos);
+    } catch {
+      return null;
+    }
+  }
+
+  if (typeof bodyPhotos === "object") {
+    return bodyPhotos;
+  }
+
+  return null;
+}
+
+function getMissingPhotoUrls(photos) {
+  return PHOTO_FIELDS.filter((field) => !isHttpUrl(photos?.[field]));
+}
+
+async function resolveCheckPhotos(req, folder) {
+  const fromBody = parseBodyPhotos(req.body?.photos);
+
+  if (fromBody) {
+    return {
+      photos: fromBody,
+      missing: getMissingPhotoUrls(fromBody),
+    };
+  }
+
+  const missing = getMissingFields(req.files);
+
+  if (missing.length > 0) {
+    return { photos: null, missing };
+  }
+
+  return {
+    photos: await buildPhotosMap(req.files, folder),
+    missing: [],
+  };
+}
+
 async function buildPhotosMap(files, subFolder) {
   const photos = {};
 
@@ -95,12 +147,12 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
-    const missing = getMissingFields(req.files);
+    const resolved = await resolveCheckPhotos(req, "checkin");
 
-    if (missing.length > 0) {
+    if (resolved.missing.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Thiếu ảnh chụp: ${missing.join(", ")}`,
+        message: `Thiếu ảnh chụp: ${resolved.missing.join(", ")}`,
       });
     }
 
@@ -127,7 +179,7 @@ exports.driverCheckIn = async (req, res) => {
     // GPS sai vị trí: không chặn cứng, chỉ cảnh báo và yêu cầu tài xế
     // xác nhận muốn tiếp tục hay quay lại khu vực kho. Lần gọi đầu
     // (forceGps chưa gửi) trả 409 để FE hiện dialog xác nhận.
-    if (!gpsValid && forceGps !== "true") {
+    if (!gpsValid && !isForceGps(forceGps)) {
       return res.status(409).json({
         success: false,
         needConfirm: true,
@@ -140,7 +192,7 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
-    const checkInPhotos = await buildPhotosMap(req.files, "checkin");
+    const checkInPhotos = resolved.photos;
 
     await assignment.update({
       trangThai: "Đã Check In",
@@ -223,12 +275,12 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
-    const missing = getMissingFields(req.files);
+    const resolved = await resolveCheckPhotos(req, "checkout");
 
-    if (missing.length > 0) {
+    if (resolved.missing.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Thiếu ảnh chụp: ${missing.join(", ")}`,
+        message: `Thiếu ảnh chụp: ${resolved.missing.join(", ")}`,
       });
     }
 
@@ -252,7 +304,7 @@ exports.driverCheckOut = async (req, res) => {
 
     const gpsValid = distance <= warehouse.banKinh;
 
-    if (!gpsValid && forceGps !== "true") {
+    if (!gpsValid && !isForceGps(forceGps)) {
       return res.status(409).json({
         success: false,
         needConfirm: true,
@@ -265,7 +317,7 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
-    const checkOutPhotos = await buildPhotosMap(req.files, "checkout");
+    const checkOutPhotos = resolved.photos;
 
     await assignment.update({
       trangThai: "Hoàn thành",
@@ -394,18 +446,42 @@ exports.createIncident = async (req, res) => {
       });
     }
 
-    const files = req.files || [];
+    let photos = [];
+    const bodyUrls = req.body.photoUrls;
+    const parsedUrls =
+      typeof bodyUrls === "string"
+        ? (() => {
+            try {
+              return JSON.parse(bodyUrls);
+            } catch {
+              return null;
+            }
+          })()
+        : bodyUrls;
 
-    if (files.length < 1) {
+    if (Array.isArray(parsedUrls) && parsedUrls.length >= 1) {
+      photos = parsedUrls.filter(isHttpUrl);
+    } else {
+      const files = req.files || [];
+
+      if (files.length < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng chụp ít nhất 1 ảnh minh chứng.",
+        });
+      }
+
+      photos = await Promise.all(
+        files.map((file) => uploadBufferToSupabase(file, "incidents"))
+      );
+    }
+
+    if (photos.length < 1) {
       return res.status(400).json({
         success: false,
         message: "Vui lòng chụp ít nhất 1 ảnh minh chứng.",
       });
     }
-
-    const photos = await Promise.all(
-      files.map((file) => uploadBufferToSupabase(file, "incidents"))
-    );
 
     const incident = await IncidentReport.create({
       assignmentId: assignment.id,

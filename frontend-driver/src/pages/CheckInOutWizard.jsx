@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -20,7 +20,8 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
 import { driverCheckIn, driverCheckOut } from "../api/assignmentApi";
-import { compressImage, uploadErrorMessage } from "../utils/compressImage";
+import { uploadErrorMessage } from "../utils/compressImage";
+import { uploadDriverPhotos } from "../utils/uploadPhoto";
 
 // step 0 : nhập ODO
 // step 1 : danh sách 6 ảnh cần chụp (chụp tự do, không theo thứ tự)
@@ -56,7 +57,9 @@ export default function CheckInOutWizard({ mode }) {
   const [photos, setPhotos] = useState({});
   const [photoUrls, setPhotoUrls] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState("");
   const [gpsAlert, setGpsAlert] = useState(null);
+  const uploadedPhotosRef = useRef(null);
 
   function handleOdoNext() {
     if (!odo) {
@@ -110,34 +113,37 @@ export default function CheckInOutWizard({ mode }) {
 
   async function handleSubmit(force = false) {
     setSubmitting(true);
+    setSubmitStatus("Đang nén và tải ảnh...");
 
     try {
       const position = await getCurrentPosition();
+      const folder = isCheckIn ? "checkin" : "checkout";
+      const photoUrls =
+        uploadedPhotosRef.current ||
+        (await uploadDriverPhotos(photos, folder, (current, total) => {
+          setSubmitStatus(`Đang tải ảnh ${current}/${total}...`);
+        }));
+      uploadedPhotosRef.current = photoUrls;
 
-      const formData = new FormData();
+      setSubmitStatus("Đang gửi check-in...");
 
-      formData.append("msnv", user.msnv);
-      formData.append("forceGps", force ? "true" : "false");
-
-      if (isCheckIn) {
-        formData.append("odoCheckIn", odo);
-        formData.append("checkInLatitude", position.coords.latitude);
-        formData.append("checkInLongitude", position.coords.longitude);
-      } else {
-        formData.append("odoCheckOut", odo);
-        formData.append("checkOutLatitude", position.coords.latitude);
-        formData.append("checkOutLongitude", position.coords.longitude);
-      }
-
-      for (const { key } of PHOTO_STEPS) {
-        const compressed = await compressImage(photos[key]);
-        formData.append(key, compressed, `${key}.jpg`);
-      }
+      const payload = {
+        msnv: user.msnv,
+        forceGps: force,
+        photos: photoUrls,
+      };
 
       if (isCheckIn) {
-        await driverCheckIn(id, formData);
+        payload.odoCheckIn = odo;
+        payload.checkInLatitude = position.coords.latitude;
+        payload.checkInLongitude = position.coords.longitude;
+        await driverCheckIn(id, payload);
       } else {
-        await driverCheckOut(id, formData);
+        payload.odoCheckOut = odo;
+        payload.checkOutLatitude = position.coords.latitude;
+        payload.checkOutLongitude = position.coords.longitude;
+        setSubmitStatus("Đang gửi check-out...");
+        await driverCheckOut(id, payload);
       }
 
       alert(isCheckIn ? "Check In thành công!" : "Check Out thành công!");
@@ -157,6 +163,7 @@ export default function CheckInOutWizard({ mode }) {
       );
     } finally {
       setSubmitting(false);
+      setSubmitStatus("");
     }
   }
 
@@ -293,7 +300,9 @@ export default function CheckInOutWizard({ mode }) {
             disabled={submitting}
             onClick={() => handleSubmit(false)}
           >
-            {submitting ? "Đang xử lý..." : `XÁC NHẬN ${title}`}
+            {submitting
+              ? submitStatus || "Đang xử lý..."
+              : `XÁC NHẬN ${title}`}
           </Button>
         </Paper>
       )}
