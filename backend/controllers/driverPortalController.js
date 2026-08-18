@@ -23,6 +23,10 @@ function publicErrorMessage(err, fallback) {
   return fallback || msg || "Có lỗi xảy ra.";
 }
 
+function isForceGps(value) {
+  return value === true || value === "true";
+}
+
 function isHttpUrl(value) {
   return typeof value === "string" && /^https?:\/\//i.test(value.trim());
 }
