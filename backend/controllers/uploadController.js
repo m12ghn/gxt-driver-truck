@@ -11,6 +11,7 @@ const {
   uploadBufferToSupabase,
   createSignedUpload,
 } = require("../utils/uploadToSupabase");
+const { normalizeKhoName } = require("../utils/ensureWarehouses");
 
 // ========================================
 // IMPORT EXCEL
@@ -110,7 +111,7 @@ exports.importExcel = async (req, res) => {
       await Assignment.create({
         ngay,
         ca: row["Ca"],
-        kho: row["Kho"],
+        kho: normalizeKhoName(row["Kho"]),
         vehicleId: vehicle.id,
         driverId: driver.id,
         trangThai: "Chưa thực hiện",

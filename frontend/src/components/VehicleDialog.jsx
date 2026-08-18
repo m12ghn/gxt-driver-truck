@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createVehicle, updateVehicle } from "../api/vehicleApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses } from "../constants/warehouses";
+import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
 
 import {
   Dialog,
@@ -42,9 +42,7 @@ export default function VehicleDialog({
     // khi API lỗi hoặc bảng Warehouses chưa có dữ liệu.
     getWarehouses()
       .then((res) => {
-        const list = (res.data?.data || [])
-          .map((w) => w.ten || w)
-          .filter(Boolean);
+        const list = officialWarehouseNames(res.data?.data || []);
         if (list.length) setKhoOptions(list);
       })
       .catch(() => {});

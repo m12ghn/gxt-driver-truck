@@ -35,7 +35,7 @@ import WarehouseIcon from "@mui/icons-material/Warehouse";
 import StatCard from "../components/StatCard";
 import { getReportStats, exportReportExcel } from "../api/statsApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses } from "../constants/warehouses";
+import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
 import { brand } from "../theme/brand";
 
 function SectionHeading({ icon, children, hint }) {
@@ -121,10 +121,7 @@ export default function Report() {
   async function loadWarehouses() {
     try {
       const res = await getWarehouses();
-      const list = (res.data?.data || [])
-        .map((w) => w.ten || w.name || w)
-        .filter(Boolean);
-
+      const list = officialWarehouseNames(res.data?.data || []);
       if (list.length > 0) setKhoOptions(list);
     } catch (err) {
       console.error(err);

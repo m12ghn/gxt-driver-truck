@@ -71,4 +71,14 @@ async function findWarehouseByName(ten) {
   );
 }
 
-module.exports = { ensureWarehouses, findWarehouseByName, SHORT_TO_OFFICIAL };
+function normalizeKhoName(kho) {
+  const name = String(kho || "").trim();
+  return SHORT_TO_OFFICIAL[name] || name;
+}
+
+module.exports = {
+  ensureWarehouses,
+  findWarehouseByName,
+  SHORT_TO_OFFICIAL,
+  normalizeKhoName,
+};

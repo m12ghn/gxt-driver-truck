@@ -3,7 +3,7 @@ import { getVehicles } from "../api/vehicleApi";
 import { getDrivers } from "../api/driverApi";
 import { createAssignment } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses } from "../constants/warehouses";
+import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
 
 import {
   Dialog,
@@ -56,9 +56,7 @@ export default function AssignmentDialog({
   async function loadWarehouses() {
     try {
       const res = await getWarehouses();
-      const list = (res.data?.data || [])
-        .map((w) => w.ten || w)
-        .filter(Boolean);
+      const list = officialWarehouseNames(res.data?.data || []);
       if (list.length) setKhoOptions(list);
     } catch (err) {
       console.error(err);

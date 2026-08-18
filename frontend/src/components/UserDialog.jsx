@@ -16,7 +16,7 @@ import {
   updateUser,
 } from "../api/userApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses } from "../constants/warehouses";
+import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
 
 export default function UserDialog({
   open,
@@ -36,9 +36,7 @@ export default function UserDialog({
 
     getWarehouses()
       .then((res) => {
-        const list = (res.data?.data || [])
-          .map((w) => w.ten || w)
-          .filter(Boolean);
+        const list = officialWarehouseNames(res.data?.data || []);
         if (list.length) setKhoOptions(list);
       })
       .catch(() => {});

@@ -24,6 +24,7 @@ import "leaflet/dist/leaflet.css";
 
 import { getAssignments } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
+import { officialWarehouseNames } from "../constants/warehouses";
 import { brand } from "../theme/brand";
 
 function FitAll({ points }) {
@@ -64,7 +65,9 @@ export default function GpsMap() {
         getWarehouses(),
       ]);
       setAssignments(aRes.data.data || []);
-      setWarehouses(wRes.data.data || []);
+      const all = wRes.data.data || [];
+      const official = new Set(officialWarehouseNames(all));
+      setWarehouses(all.filter((w) => official.has(w.ten)));
     } catch (err) {
       console.error(err);
     } finally {

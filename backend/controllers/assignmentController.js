@@ -15,6 +15,7 @@ const {
   applyWarehouseScope,
   assertWarehouseAccess,
 } = require("../utils/scopeHelpers");
+const { normalizeKhoName } = require("../utils/ensureWarehouses");
 
 function denyIfOutOfScope(req, res, assignment) {
   try {
@@ -304,6 +305,8 @@ exports.createAssignment = async (req, res) => {
       }
       kho = req.user.kho;
     }
+
+    kho = normalizeKhoName(kho);
 
     // ==============================
     // Chặn trùng xe
