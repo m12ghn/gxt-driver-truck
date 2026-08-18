@@ -15,8 +15,12 @@ const {
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
 
-function isForceGps(value) {
-  return value === true || value === "true";
+function publicErrorMessage(err, fallback) {
+  const msg = err?.message || "";
+  if (/EMAXCONNSESSION|max clients reached|too many clients/i.test(msg)) {
+    return "Hệ thống đang bận, vui lòng đợi 5 giây rồi gửi lại.";
+  }
+  return fallback || msg || "Có lỗi xảy ra.";
 }
 
 function isHttpUrl(value) {
@@ -216,7 +220,7 @@ exports.driverCheckIn = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: publicErrorMessage(err),
     });
   }
 };
@@ -342,7 +346,7 @@ exports.driverCheckOut = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: publicErrorMessage(err),
     });
   }
 };
@@ -392,7 +396,7 @@ exports.getAssignmentHistory = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: publicErrorMessage(err),
     });
   }
 };
@@ -504,7 +508,7 @@ exports.createIncident = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: publicErrorMessage(err),
     });
   }
 };
@@ -537,7 +541,7 @@ exports.getIncidents = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: publicErrorMessage(err),
     });
   }
 };

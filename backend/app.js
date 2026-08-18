@@ -36,37 +36,58 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function skipDatabase(req) {
+  const path = req.path || "";
+  const url = req.originalUrl || "";
+  return (
+    path === "/" ||
+    /\/upload\/(signed|driver-photo|test)/.test(path) ||
+    /\/upload\/(signed|driver-photo|test)/.test(url)
+  );
+}
+
+function publicDbError(err) {
+  const msg = err?.message || "";
+  if (/EMAXCONNSESSION|max clients reached|too many clients/i.test(msg)) {
+    return "Hệ thống đang bận, vui lòng đợi 5 giây rồi gửi lại.";
+  }
+  return "Database connection error";
+}
+
 // ==============================
 // DATABASE
-// Trên serverless (Vercel) mỗi cold start có thể chạy lại module này —
-// sequelize.sync() chỉ tạo bảng nếu chưa có nên gọi lại vẫn an toàn,
-// nhưng chỉ chạy 1 lần cho mỗi instance đang sống (biến `synced` ở
-// module scope) để đỡ tốn thời gian mỗi request.
-// Không dùng alter:true vì SQLite/Postgres hay lỗi FOREIGN KEY
-// constraint khi model có ràng buộc khóa ngoại. Cần đổi schema thì
-// dùng script migrate riêng.
+// Không gọi sequelize.sync() trên Vercel: schema đã có, sync() giữ
+// connection lâu và dễ làm đầy pool 15 slot của Supabase session mode.
 // ==============================
-let synced = false;
+let connected = false;
 
-async function ensureSynced() {
-  if (synced) return;
+async function ensureConnected() {
+  if (connected) return;
 
-  await sequelize.sync();
-  synced = true;
+  if (process.env.VERCEL) {
+    await sequelize.authenticate();
+  } else {
+    await sequelize.sync();
+  }
 
+  connected = true;
   console.log("✅ Database Connected");
 }
 
 app.use(async (req, res, next) => {
+  if (skipDatabase(req)) {
+    return next();
+  }
+
   try {
-    await ensureSynced();
+    await ensureConnected();
     next();
   } catch (err) {
     console.error("❌ Database Error:", err);
 
-    res.status(500).json({
+    res.status(503).json({
       success: false,
-      message: "Database connection error",
+      message: publicDbError(err),
     });
   }
 });

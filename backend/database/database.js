@@ -10,22 +10,46 @@ require("pg");
 
 const { Sequelize } = require("sequelize");
 
-// ==============================
-// Kết nối Postgres (Supabase) qua DATABASE_URL trong .env
-// Lấy connection string tại: Supabase Dashboard → Project Settings →
-// Database → Connection string → chọn "URI". Nên dùng chế độ Session
-// (hoặc kết nối trực tiếp) cho app Node chạy dài hạn như backend này —
-// không dùng "Transaction pooler" (port 6543) vì không hợp với cách
-// Sequelize giữ connection pool riêng.
-// ==============================
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
+// Vercel spins up many short-lived instances. Each instance used to open
+// Sequelize's default pool (5 connections) against Supabase session mode
+// (cap 15) → EMAXCONNSESSION. Use a tiny pool, and on serverless prefer
+// the Transaction pooler (port 6543) which multiplexes clients.
+function resolveDatabaseUrl(raw) {
+  if (!raw) return raw;
+
+  try {
+    const url = new URL(raw);
+    const isServerless = Boolean(process.env.VERCEL);
+    const isSupabasePooler = url.hostname.includes("pooler.supabase.com");
+
+    if (isServerless && isSupabasePooler && (url.port === "5432" || url.port === "")) {
+      url.port = "6543";
+    }
+
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+const isServerless = Boolean(process.env.VERCEL);
+
+const sequelize = new Sequelize(resolveDatabaseUrl(process.env.DATABASE_URL), {
   dialect: "postgres",
   protocol: "postgres",
+  logging: false,
   dialectOptions: {
     ssl: {
       require: true,
       rejectUnauthorized: false,
     },
+  },
+  pool: {
+    max: isServerless ? 1 : 5,
+    min: 0,
+    acquire: 30000,
+    idle: isServerless ? 5000 : 10000,
+    evict: isServerless ? 5000 : 10000,
   },
 });
 

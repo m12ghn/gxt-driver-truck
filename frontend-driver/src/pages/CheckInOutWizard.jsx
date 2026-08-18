@@ -111,6 +111,23 @@ export default function CheckInOutWizard({ mode }) {
     });
   }
 
+  async function sendCheckPayload(payload) {
+    const send = () =>
+      isCheckIn ? driverCheckIn(id, payload) : driverCheckOut(id, payload);
+
+    try {
+      await send();
+    } catch (err) {
+      if (err.response?.status === 503) {
+        setSubmitStatus("Máy chủ bận, đang thử lại...");
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+        await send();
+        return;
+      }
+      throw err;
+    }
+  }
+
   async function handleSubmit(force = false) {
     setSubmitting(true);
     setSubmitStatus("Đang nén và tải ảnh...");
@@ -137,14 +154,14 @@ export default function CheckInOutWizard({ mode }) {
         payload.odoCheckIn = odo;
         payload.checkInLatitude = position.coords.latitude;
         payload.checkInLongitude = position.coords.longitude;
-        await driverCheckIn(id, payload);
       } else {
         payload.odoCheckOut = odo;
         payload.checkOutLatitude = position.coords.latitude;
         payload.checkOutLongitude = position.coords.longitude;
         setSubmitStatus("Đang gửi check-out...");
-        await driverCheckOut(id, payload);
       }
+
+      await sendCheckPayload(payload);
 
       alert(isCheckIn ? "Check In thành công!" : "Check Out thành công!");
 
