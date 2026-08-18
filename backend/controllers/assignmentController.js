@@ -16,6 +16,10 @@ const {
   assertWarehouseAccess,
 } = require("../utils/scopeHelpers");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
+const {
+  withReadablePhotos,
+  withReadablePhotosList,
+} = require("../utils/uploadToSupabase");
 
 function denyIfOutOfScope(req, res, assignment) {
   try {
@@ -78,7 +82,7 @@ exports.getTodayAssignment = async (req, res) => {
 
     res.json({
       success: true,
-      data: assignment,
+      data: await withReadablePhotos(assignment),
     });
 
   } catch (err) {
@@ -116,7 +120,7 @@ exports.getTodayAssignments = async (req, res) => {
 
     res.json({
       success: true,
-      data: assignments,
+      data: await withReadablePhotosList(assignments),
     });
 
   } catch (err) {
@@ -175,7 +179,7 @@ exports.getAssignments = async (req, res) => {
 
     res.json({
       success: true,
-      data: assignments,
+      data: await withReadablePhotosList(assignments),
     });
 
   } catch (err) {

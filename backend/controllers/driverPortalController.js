@@ -14,6 +14,7 @@ const {
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
 const { findWarehouseByName } = require("../utils/ensureWarehouses");
+const { withReadablePhotosList } = require("../utils/uploadToSupabase");
 
 function publicErrorMessage(err, fallback) {
   const msg = err?.message || "";
@@ -388,7 +389,7 @@ exports.getAssignmentHistory = async (req, res) => {
 
     res.json({
       success: true,
-      data: assignments,
+      data: await withReadablePhotosList(assignments),
     });
 
   } catch (err) {

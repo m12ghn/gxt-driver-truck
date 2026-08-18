@@ -5,6 +5,7 @@ const cors = require("cors");
 
 const sequelize = require("./database/database");
 const { ensureWarehouses } = require("./utils/ensureWarehouses");
+const { ensureStorageBucket } = require("./utils/uploadToSupabase");
 
 // ==============================
 // Models
@@ -78,6 +79,12 @@ async function ensureConnected() {
     await ensureWarehouses();
   } catch (err) {
     console.error("⚠️  Seed warehouses failed:", err.message);
+  }
+
+  try {
+    await ensureStorageBucket();
+  } catch (err) {
+    console.error("⚠️  Storage bucket setup failed:", err.message);
   }
 }
 

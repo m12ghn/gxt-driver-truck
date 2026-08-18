@@ -6,6 +6,10 @@ export const BACKEND_ORIGIN = "";
 export function buildImageUrl(path) {
   if (!path) return null;
 
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
   return `${BACKEND_ORIGIN}${path}`;
 }
 
