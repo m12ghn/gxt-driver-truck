@@ -1,6 +1,37 @@
 const { Op } = require("sequelize");
 
+const sequelize = require("../database/database");
 const Assignment = require("../models/Assignment");
+const Driver = require("../models/Driver");
+
+function vietnamToday() {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
+
+function assignmentDays() {
+  const utcToday = new Date().toISOString().split("T")[0];
+  return [...new Set([vietnamToday(), utcToday])];
+}
+
+function normalizeMsnv(value) {
+  return String(value || "").trim();
+}
+
+async function findDriversByMsnv(msnv) {
+  const trimmed = normalizeMsnv(msnv);
+  if (!trimmed) return [];
+
+  return Driver.findAll({
+    where: {
+      [Op.or]: [
+        { msnv: trimmed },
+        sequelize.where(sequelize.fn("trim", sequelize.col("msnv")), trimmed),
+      ],
+    },
+  });
+}
 
 // ==============================
 // Tự động chuyển các chuyến đã Check In
@@ -9,9 +40,7 @@ const Assignment = require("../models/Assignment");
 // ==============================
 async function markOverdueAssignments() {
 
-  const today = new Date()
-    .toISOString()
-    .split("T")[0];
+  const today = vietnamToday();
 
   await Assignment.update(
     {
@@ -98,6 +127,10 @@ async function findUnfinishedAssignment({
 }
 
 module.exports = {
+  vietnamToday,
+  assignmentDays,
+  normalizeMsnv,
+  findDriversByMsnv,
   markOverdueAssignments,
   findUnfinishedAssignment,
 };

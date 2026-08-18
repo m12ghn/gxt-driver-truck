@@ -7,6 +7,9 @@ const Driver = require("../models/Driver");
 const IncidentReport = require("../models/IncidentReport");
 
 const {
+  vietnamToday,
+  assignmentDays,
+  findDriversByMsnv,
   markOverdueAssignments,
   findUnfinishedAssignment,
 } = require("../utils/assignmentHelpers");
@@ -43,18 +46,11 @@ exports.getTodayAssignment = async (req, res) => {
     await markOverdueAssignments();
 
     const { msnv } = req.params;
+    const days = assignmentDays();
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const drivers = await findDriversByMsnv(msnv);
 
-    const driver = await Driver.findOne({
-      where: {
-        msnv,
-      },
-    });
-
-    if (!driver) {
+    if (!drivers.length) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy tài xế.",
@@ -63,13 +59,17 @@ exports.getTodayAssignment = async (req, res) => {
 
     const assignment = await Assignment.findOne({
       where: {
-        ngay: today,
-        driverId: driver.id,
+        ngay: { [Op.in]: days },
+        driverId: { [Op.in]: drivers.map((item) => item.id) },
       },
       include: [
         Vehicle,
         Driver,
         { model: IncidentReport, as: "incidents" },
+      ],
+      order: [
+        ["ngay", "DESC"],
+        ["ca", "ASC"],
       ],
     });
 
@@ -103,9 +103,7 @@ exports.getTodayAssignments = async (req, res) => {
 
     await markOverdueAssignments();
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const today = vietnamToday();
 
     const where = applyWarehouseScope(req, { ngay: today });
 
@@ -143,9 +141,7 @@ exports.getAssignments = async (req, res) => {
 
     await markOverdueAssignments();
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const today = vietnamToday();
 
     let { ngay, from, to } = req.query;
 
@@ -200,9 +196,7 @@ exports.exportExcel = async (req, res) => {
 
     await markOverdueAssignments();
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const today = vietnamToday();
 
     let { from, to } = req.query;
 

@@ -9,6 +9,7 @@ const { getDistanceMeters } = require("../utils/geoHelpers");
 const {
   markOverdueAssignments,
   findUnfinishedAssignment,
+  findDriversByMsnv,
 } = require("../utils/assignmentHelpers");
 
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
@@ -362,16 +363,16 @@ exports.getAssignmentHistory = async (req, res) => {
     const { msnv } = req.params;
     const { from, to } = req.query;
 
-    const driver = await Driver.findOne({ where: { msnv } });
+    const drivers = await findDriversByMsnv(msnv);
 
-    if (!driver) {
+    if (!drivers.length) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy tài xế.",
       });
     }
 
-    const where = { driverId: driver.id };
+    const where = { driverId: { [Op.in]: drivers.map((item) => item.id) } };
 
     if (from && to) {
       where.ngay = { [Op.between]: [from, to] };
