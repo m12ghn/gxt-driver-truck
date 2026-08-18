@@ -29,7 +29,10 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await driverLogin(msnv.trim(), matKhau.trim());
+      const res = await driverLogin(
+        msnv.trim(),
+        matKhau.trim().replace(/[\s.\-]/g, "")
+      );
 
       localStorage.setItem("driverUser", JSON.stringify(res.data.data));
       navigate("/");
