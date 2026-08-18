@@ -182,8 +182,8 @@ exports.importExcel = async (req, res) => {
           hoTen,
           soDienThoai,
 
-          // Mật khẩu mặc định = MSNV
-          matKhau: msnv,
+          // Mật khẩu mặc định = số điện thoại
+          matKhau: soDienThoai,
 
           quyen: "DRIVER",
 

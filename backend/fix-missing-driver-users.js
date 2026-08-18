@@ -41,14 +41,14 @@ async function run() {
       msnv: driver.msnv,
       hoTen: driver.hoTen,
       soDienThoai: driver.soDienThoai,
-      matKhau: driver.msnv,
+      matKhau: driver.soDienThoai,
       quyen: "DRIVER",
       trangThai:
         driver.trangThai === "Đang làm" ? "Hoạt động" : "Khóa",
     });
 
     console.log(
-      `Đã tạo User cho Driver MSNV ${driver.msnv} (${driver.hoTen}), mật khẩu mặc định = ${driver.msnv}`
+      `Đã tạo User cho Driver MSNV ${driver.msnv} (${driver.hoTen}), mật khẩu mặc định = số điện thoại`
     );
 
     created++;

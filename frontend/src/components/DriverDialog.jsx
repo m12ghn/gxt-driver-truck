@@ -123,7 +123,7 @@ export default function DriverDialog({
 
 Đăng nhập Driver Portal:
 Mã nhân viên: ${form.msnv}
-Mật khẩu: ${form.msnv}`
+Mật khẩu: ${form.soDienThoai}`
         );
 
       }

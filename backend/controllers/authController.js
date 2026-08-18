@@ -87,10 +87,10 @@ exports.adminLogin = async (req, res) => {
 // =====================================
 exports.driverLogin = async (req, res) => {
   try {
-    const loginId = String(req.body.msnv || "").trim();
+    const msnv = String(req.body.msnv || "").trim();
     const matKhau = String(req.body.matKhau || "").trim();
 
-    if (!loginId || !matKhau) {
+    if (!msnv || !matKhau) {
       return res.status(400).json({
         success: false,
         message: "Vui lòng nhập MSNV và mật khẩu.",
@@ -99,29 +99,22 @@ exports.driverLogin = async (req, res) => {
 
     let user = await User.findOne({
       where: {
+        msnv,
         quyen: "DRIVER",
-        [Op.or]: [{ msnv: loginId }, { soDienThoai: loginId }],
       },
     });
 
     if (!user) {
-      const driver = await Driver.findOne({
-        where: {
-          [Op.or]: [{ msnv: loginId }, { soDienThoai: loginId }],
-        },
-      });
+      const driver = await Driver.findOne({ where: { msnv } });
+      const phone = String(driver?.soDienThoai || "").trim();
 
-      if (
-        driver &&
-        (matKhau === String(driver.msnv).trim() ||
-          matKhau === String(driver.soDienThoai || "").trim())
-      ) {
+      if (driver && matKhau === phone) {
         try {
           user = await User.create({
             msnv: driver.msnv,
             hoTen: driver.hoTen,
             soDienThoai: driver.soDienThoai,
-            matKhau: String(driver.msnv).trim(),
+            matKhau: phone,
             quyen: "DRIVER",
             trangThai:
               driver.trangThai === "Đang làm" ? "Hoạt động" : "Khóa",
@@ -133,11 +126,13 @@ exports.driverLogin = async (req, res) => {
             msnv: driver.msnv,
             hoTen: driver.hoTen,
             soDienThoai: driver.soDienThoai,
+            matKhau: phone,
             quyen: "DRIVER",
             trangThai:
               driver.trangThai === "Đang làm" ? "Hoạt động" : "Khóa",
             toJSON() {
-              return { ...this };
+              const copy = { ...this };
+              return copy;
             },
           };
         }
@@ -151,11 +146,9 @@ exports.driverLogin = async (req, res) => {
       });
     }
 
-    const storedPass = String(user.matKhau || user.msnv || "").trim();
-    const passwordOk =
-      matKhau === storedPass || matKhau === String(user.msnv).trim();
+    const phone = String(user.soDienThoai || "").trim();
 
-    if (!passwordOk) {
+    if (matKhau !== phone) {
       return res.status(401).json({
         success: false,
         message: "Sai MSNV hoặc mật khẩu.",
@@ -167,6 +160,10 @@ exports.driverLogin = async (req, res) => {
         success: false,
         message: "Tài khoản đang bị khóa. Vui lòng liên hệ Admin.",
       });
+    }
+
+    if (user.update && String(user.matKhau || "").trim() !== phone) {
+      await user.update({ matKhau: phone });
     }
 
     const plain = typeof user.toJSON === "function" ? user.toJSON() : { ...user };

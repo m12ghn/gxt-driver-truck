@@ -175,9 +175,9 @@ exports.createDriver = async (req, res) => {
         hoTen,
         soDienThoai,
 
-        // Tài khoản = SĐT
-        // Mật khẩu = MSNV
-        matKhau: msnv,
+        // Tài khoản = MSNV
+        // Mật khẩu = số điện thoại
+        matKhau: soDienThoai,
 
         quyen: "DRIVER",
 
@@ -371,8 +371,8 @@ exports.updateDriver = async (req, res) => {
           hoTen,
           soDienThoai,
 
-          // Mật khẩu luôn = MSNV
-          matKhau: msnv,
+          // Mật khẩu luôn = số điện thoại
+          matKhau: soDienThoai,
 
           trangThai:
             trangThai === "Đang làm"
