@@ -384,7 +384,7 @@ export default function Assignment() {
                 setOpenDialog(true)
               }
             >
-              + PHÊN CÔNG
+              + PHÂN CÔNG
             </Button>
 
             <Button
