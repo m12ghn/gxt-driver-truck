@@ -121,7 +121,8 @@ export default function DriverDialog({
         alert(
 `Thêm tài xế thành công.
 
-Tài khoản: ${form.soDienThoai}
+Đăng nhập Driver Portal:
+Mã nhân viên: ${form.msnv}
 Mật khẩu: ${form.msnv}`
         );
 

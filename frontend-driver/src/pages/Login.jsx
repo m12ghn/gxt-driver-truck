@@ -29,7 +29,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await driverLogin(msnv, matKhau);
+      const res = await driverLogin(msnv.trim(), matKhau.trim());
 
       localStorage.setItem("driverUser", JSON.stringify(res.data.data));
       navigate("/");
