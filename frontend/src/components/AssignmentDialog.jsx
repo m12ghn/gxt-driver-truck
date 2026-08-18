@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { getVehicles } from "../api/vehicleApi";
 import { getDrivers } from "../api/driverApi";
 import { createAssignment } from "../api/assignmentApi";
-import { warehouses } from "../constants/warehouses";
+import { getWarehouses } from "../api/warehouseApi";
+import { warehouses as fallbackWarehouses } from "../constants/warehouses";
 
 import {
   Dialog,
@@ -22,6 +23,7 @@ export default function AssignmentDialog({
 }) {
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
 
   const [ngay, setNgay] = useState(
     new Date().toISOString().split("T")[0]
@@ -35,6 +37,7 @@ export default function AssignmentDialog({
     if (open) {
       loadVehicles();
       loadDrivers();
+      loadWarehouses();
     }
   }, [open]);
 
@@ -42,6 +45,21 @@ export default function AssignmentDialog({
     try {
       const res = await getVehicles();
       setVehicles(res.data.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // Lấy danh sách kho thực tế từ bảng Warehouses (Supabase) thay vì dùng
+  // danh sách cố định trong code — fallbackWarehouses chỉ dùng khi API
+  // lỗi hoặc bảng Warehouses chưa có dữ liệu.
+  async function loadWarehouses() {
+    try {
+      const res = await getWarehouses();
+      const list = (res.data?.data || [])
+        .map((w) => w.ten || w)
+        .filter(Boolean);
+      if (list.length) setKhoOptions(list);
     } catch (err) {
       console.error(err);
     }
@@ -155,7 +173,7 @@ export default function AssignmentDialog({
               value={kho}
               onChange={(e) => setKho(e.target.value)}
             >
-              {warehouses.map((item) => (
+              {khoOptions.map((item) => (
                 <MenuItem
                   key={item}
                   value={item}

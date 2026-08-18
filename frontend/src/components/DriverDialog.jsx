@@ -16,7 +16,8 @@ import {
   MenuItem,
 } from "@mui/material";
 
-import { warehouses } from "../constants/warehouses";
+import { getWarehouses } from "../api/warehouseApi";
+import { warehouses as fallbackWarehouses } from "../constants/warehouses";
 
 const defaultForm = {
   msnv: "",
@@ -36,10 +37,23 @@ export default function DriverDialog({
 }) {
 
   const [form, setForm] = useState(defaultForm);
+  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
 
   useEffect(() => {
 
     if (!open) return;
+
+    // Lấy danh sách kho thực tế từ bảng Warehouses (Supabase) thay vì
+    // dùng danh sách cố định trong code — giữ fallbackWarehouses chỉ để
+    // dùng khi API lỗi hoặc bảng Warehouses chưa có dữ liệu.
+    getWarehouses()
+      .then((res) => {
+        const list = (res.data?.data || [])
+          .map((w) => w.ten || w)
+          .filter(Boolean);
+        if (list.length) setKhoOptions(list);
+      })
+      .catch(() => {});
 
     if (driver) {
 
@@ -194,7 +208,7 @@ Mật khẩu: ${form.msnv}`
               onChange={handleChange}
               fullWidth
             >
-              {warehouses.map((item) => (
+              {khoOptions.map((item) => (
                 <MenuItem
                   key={item}
                   value={item}

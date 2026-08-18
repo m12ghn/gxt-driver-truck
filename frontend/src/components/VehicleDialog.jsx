@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createVehicle, updateVehicle } from "../api/vehicleApi";
-import { warehouses } from "../constants/warehouses";
+import { getWarehouses } from "../api/warehouseApi";
+import { warehouses as fallbackWarehouses } from "../constants/warehouses";
 
 import {
   Dialog,
@@ -30,10 +31,23 @@ export default function VehicleDialog({
   vehicle,
 }) {
   const [form, setForm] = useState(emptyForm);
+  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
   const isEdit = Boolean(vehicle);
 
   useEffect(() => {
     if (!open) return;
+
+    // Lấy danh sách kho thực tế từ bảng Warehouses (Supabase) thay vì
+    // dùng danh sách cố định trong code — fallbackWarehouses chỉ dùng
+    // khi API lỗi hoặc bảng Warehouses chưa có dữ liệu.
+    getWarehouses()
+      .then((res) => {
+        const list = (res.data?.data || [])
+          .map((w) => w.ten || w)
+          .filter(Boolean);
+        if (list.length) setKhoOptions(list);
+      })
+      .catch(() => {});
 
     if (vehicle) {
       setForm({
@@ -128,7 +142,7 @@ export default function VehicleDialog({
               onChange={handleChange}
               fullWidth
             >
-              {warehouses.map((item) => (
+              {khoOptions.map((item) => (
                 <MenuItem key={item} value={item}>
                   {item}
                 </MenuItem>
