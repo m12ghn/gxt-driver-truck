@@ -130,24 +130,27 @@ export default function CheckInOutWizard({ mode }) {
 
   async function handleSubmit(force = false) {
     setSubmitting(true);
-    setSubmitStatus("Đang nén và tải ảnh...");
+    setSubmitStatus("Đang lấy GPS và tải ảnh...");
 
     try {
-      const position = await getCurrentPosition();
       const folder = isCheckIn ? "checkin" : "checkout";
-      const photoUrls =
-        uploadedPhotosRef.current ||
-        (await uploadDriverPhotos(photos, folder, (current, total) => {
-          setSubmitStatus(`Đang tải ảnh ${current}/${total}...`);
-        }));
-      uploadedPhotosRef.current = photoUrls;
+      const [position, uploaded] = await Promise.all([
+        getCurrentPosition(),
+        uploadedPhotosRef.current
+          ? Promise.resolve(uploadedPhotosRef.current)
+          : uploadDriverPhotos(photos, folder, (current, total) => {
+              setSubmitStatus(`Đang tải ảnh ${current}/${total}...`);
+            }),
+      ]);
+      const photoMap = uploaded;
+      uploadedPhotosRef.current = photoMap;
 
       setSubmitStatus("Đang gửi check-in...");
 
       const payload = {
         msnv: user.msnv,
         forceGps: force,
-        photos: photoUrls,
+        photos: photoMap,
       };
 
       if (isCheckIn) {

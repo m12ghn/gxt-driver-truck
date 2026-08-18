@@ -20,7 +20,7 @@ import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import CameraCapture from "../components/CameraCapture";
 import { reportIncident } from "../api/assignmentApi";
 import { uploadErrorMessage } from "../utils/compressImage";
-import { uploadDriverPhoto } from "../utils/uploadPhoto";
+import { uploadDriverPhotos } from "../utils/uploadPhoto";
 
 const MAX_PHOTOS = 4;
 
@@ -91,13 +91,21 @@ export default function IncidentReport() {
     setSubmitStatus("Đang tải ảnh...");
 
     try {
-      const gps = await getCurrentPosition();
-      const photoUrls = [];
+      const gpsPromise = getCurrentPosition();
+      const asMap = {};
+      photos.forEach((item, i) => {
+        asMap[`p${i}`] = item.blob;
+      });
 
-      for (let i = 0; i < photos.length; i++) {
-        setSubmitStatus(`Đang tải ảnh ${i + 1}/${photos.length}...`);
-        photoUrls.push(await uploadDriverPhoto(photos[i].blob, "incidents"));
-      }
+      const uploaded = await uploadDriverPhotos(
+        asMap,
+        "incidents",
+        (current, total) => {
+          setSubmitStatus(`Đang tải ảnh ${current}/${total}...`);
+        }
+      );
+      const gps = await gpsPromise;
+      const photoUrls = photos.map((_, i) => uploaded[`p${i}`]);
 
       setSubmitStatus("Đang gửi báo cáo...");
 

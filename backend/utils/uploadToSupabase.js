@@ -30,8 +30,7 @@ async function uploadBufferToSupabase(file, folder) {
   return data.publicUrl;
 }
 
-async function createSignedUpload(folder) {
-  await ensureStorageBucket();
+async function createSignedUploadSlot(folder) {
   const safeFolder = String(folder || "checkin").replace(/[^a-z0-9-]/gi, "");
   const objectPath = `${safeFolder || "checkin"}/${Date.now()}-${randomUUID()}.jpg`;
 
@@ -51,6 +50,19 @@ async function createSignedUpload(folder) {
     token: data.token,
     publicUrl: pub.publicUrl,
   };
+}
+
+async function createSignedUpload(folder) {
+  await ensureStorageBucket();
+  return createSignedUploadSlot(folder);
+}
+
+async function createSignedUploads(folder, count = 1) {
+  await ensureStorageBucket();
+  const n = Math.min(8, Math.max(1, Number(count) || 1));
+  return Promise.all(
+    Array.from({ length: n }, () => createSignedUploadSlot(folder))
+  );
 }
 
 async function ensureStorageBucket() {
@@ -166,6 +178,7 @@ async function withReadablePhotosList(list) {
 module.exports = {
   uploadBufferToSupabase,
   createSignedUpload,
+  createSignedUploads,
   ensureStorageBucket,
   toReadableUrl,
   withReadablePhotos,

@@ -10,6 +10,7 @@ const {
 const {
   uploadBufferToSupabase,
   createSignedUpload,
+  createSignedUploads,
 } = require("../utils/uploadToSupabase");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 
@@ -170,11 +171,16 @@ exports.createSignedUpload = async (req, res) => {
       ? req.body.folder
       : "checkin";
 
-    const signed = await createSignedUpload(folder);
+    const count = Math.min(8, Math.max(1, Number(req.body?.count) || 1));
+    const files =
+      count === 1
+        ? [await createSignedUpload(folder)]
+        : await createSignedUploads(folder, count);
 
     res.json({
       success: true,
-      ...signed,
+      ...files[0],
+      files,
     });
   } catch (err) {
     console.error(err);
