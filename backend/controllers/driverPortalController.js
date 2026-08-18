@@ -3,7 +3,6 @@ const { Op } = require("sequelize");
 const Assignment = require("../models/Assignment");
 const Vehicle = require("../models/Vehicle");
 const Driver = require("../models/Driver");
-const Warehouse = require("../models/Warehouse");
 const IncidentReport = require("../models/IncidentReport");
 
 const { getDistanceMeters } = require("../utils/geoHelpers");
@@ -14,6 +13,7 @@ const {
 
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
+const { findWarehouseByName } = require("../utils/ensureWarehouses");
 
 function publicErrorMessage(err, fallback) {
   const msg = err?.message || "";
@@ -160,9 +160,7 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
-    const warehouse = await Warehouse.findOne({
-      where: { ten: assignment.kho },
-    });
+    const warehouse = await findWarehouseByName(assignment.kho);
 
     if (!warehouse) {
       return res.status(400).json({
@@ -288,9 +286,7 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
-    const warehouse = await Warehouse.findOne({
-      where: { ten: assignment.kho },
-    });
+    const warehouse = await findWarehouseByName(assignment.kho);
 
     if (!warehouse) {
       return res.status(400).json({

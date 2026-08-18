@@ -12,6 +12,7 @@ import Vehicle from "./pages/Vehicle";
 import Driver from "./pages/Driver";
 import Assignment from "./pages/Assignment";
 import GpsMap from "./pages/GpsMap";
+import Warehouse from "./pages/Warehouse";
 import User from "./pages/User";
 import Forbidden from "./pages/Forbidden";
 
@@ -104,6 +105,20 @@ export default function App() {
               ]}
             >
               <Driver />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/warehouses"
+          element={
+            <PrivateRoute
+              roles={[
+                "SUPER_ADMIN",
+                "ADMIN",
+              ]}
+            >
+              <Warehouse />
             </PrivateRoute>
           }
         />

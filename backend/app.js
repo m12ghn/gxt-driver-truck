@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 
 const sequelize = require("./database/database");
+const { ensureWarehouses } = require("./utils/ensureWarehouses");
 
 // ==============================
 // Models
@@ -72,6 +73,12 @@ async function ensureConnected() {
 
   connected = true;
   console.log("✅ Database Connected");
+
+  try {
+    await ensureWarehouses();
+  } catch (err) {
+    console.error("⚠️  Seed warehouses failed:", err.message);
+  }
 }
 
 app.use(async (req, res, next) => {

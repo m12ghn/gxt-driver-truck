@@ -30,6 +30,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import PeopleIcon from "@mui/icons-material/People";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import MapIcon from "@mui/icons-material/Map";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
 
 import GhnLogo from "../components/GhnLogo";
 import { getAlerts } from "../api/statsApi";
@@ -110,6 +111,12 @@ export default function MainLayout() {
       text: "Quản lý tài xế",
       icon: <PeopleIcon />,
       path: "/drivers",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+    },
+    {
+      text: "Quản lý kho",
+      icon: <WarehouseIcon />,
+      path: "/warehouses",
       roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
