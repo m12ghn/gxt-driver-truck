@@ -237,6 +237,7 @@ exports.exportExcel = async (req, res) => {
       "Biển số": item.Vehicle?.bienSo || "",
       "MSNV": item.Driver?.msnv || "",
       "Họ tên": item.Driver?.hoTen || "",
+      "SĐT": item.Driver?.soDienThoai || "",
       "Check In - Thời gian": item.checkInTime
         ? formatDateTime(item.checkInTime)
         : "",

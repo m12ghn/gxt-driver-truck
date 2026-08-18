@@ -351,6 +351,9 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {assignment.Driver?.msnv}
+                {assignment.Driver?.soDienThoai
+                  ? ` · ${assignment.Driver.soDienThoai}`
+                  : ""}
               </Typography>
             </Grid>
 

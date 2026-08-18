@@ -325,7 +325,8 @@ export default function Assignment() {
     const matchSearch =
       item.Vehicle?.bienSo?.toLowerCase().includes(keyword) ||
       item.Driver?.msnv?.toLowerCase().includes(keyword) ||
-      item.Driver?.hoTen?.toLowerCase().includes(keyword);
+      item.Driver?.hoTen?.toLowerCase().includes(keyword) ||
+      item.Driver?.soDienThoai?.toLowerCase().includes(keyword);
 
     const matchStatus =
       statusFilter === "" ||
@@ -448,7 +449,7 @@ export default function Assignment() {
 
           <TextField
             size="small"
-            label="Tìm BSX / MSNV / Tên"
+            label="Tìm BSX / MSNV / Tên / SĐT"
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
@@ -611,7 +612,7 @@ export default function Assignment() {
             WebkitOverflowScrolling: "touch",
           }}
         >
-        <Table size="small" sx={{ minWidth: 1100 }}>
+        <Table size="small" sx={{ minWidth: 1200 }}>
 
           <TableHead>
 
@@ -623,6 +624,7 @@ export default function Assignment() {
               <TableCell sx={{ whiteSpace: "nowrap" }}>Biển số</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>MSNV</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Họ tên</TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>SĐT</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Check In</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Check Out</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Trạng thái</TableCell>
@@ -664,6 +666,10 @@ export default function Assignment() {
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
       {item.Driver?.hoTen}
+    </TableCell>
+
+    <TableCell sx={{ whiteSpace: "nowrap" }}>
+      {item.Driver?.soDienThoai || "--"}
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
