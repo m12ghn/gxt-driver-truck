@@ -6,6 +6,8 @@ import ReplayIcon from "@mui/icons-material/Replay";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 
+import { compressImage } from "../utils/compressImage";
+
 // Dùng camera native của điện thoại (input capture) — hiện nút
 // "CHỤP ẢNH" ngay, không mở live preview WebRTC trong trang.
 export default function CameraCapture({ label, onConfirm, onClose }) {
@@ -14,6 +16,7 @@ export default function CameraCapture({ label, onConfirm, onClose }) {
   const [photoBlob, setPhotoBlob] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [error, setError] = useState("");
+  const [compressing, setCompressing] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -53,9 +56,20 @@ export default function CameraCapture({ label, onConfirm, onClose }) {
     setTimeout(() => openNativeCamera(), 50);
   }
 
-  function handleConfirm() {
-    if (!photoBlob) return;
-    onConfirm(photoBlob);
+  async function handleConfirm() {
+    if (!photoBlob || compressing) return;
+
+    setCompressing(true);
+    setError("");
+
+    try {
+      const compressed = await compressImage(photoBlob);
+      onConfirm(compressed);
+    } catch (err) {
+      console.error(err);
+      setError("Không nén được ảnh. Vui lòng chụp lại.");
+      setCompressing(false);
+    }
   }
 
   return (
@@ -165,6 +179,7 @@ export default function CameraCapture({ label, onConfirm, onClose }) {
               size="large"
               startIcon={<ReplayIcon />}
               onClick={handleRetake}
+              disabled={compressing}
               sx={{ color: "#fff", borderColor: "#fff" }}
             >
               CHỤP LẠI
@@ -177,8 +192,9 @@ export default function CameraCapture({ label, onConfirm, onClose }) {
               size="large"
               startIcon={<CheckIcon />}
               onClick={handleConfirm}
+              disabled={compressing}
             >
-              XÁC NHẬN
+              {compressing ? "ĐANG NÉN ẢNH..." : "XÁC NHẬN"}
             </Button>
           </>
         )}

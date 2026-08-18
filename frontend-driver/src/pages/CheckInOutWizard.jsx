@@ -20,6 +20,7 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
 import { driverCheckIn, driverCheckOut } from "../api/assignmentApi";
+import { compressImage, uploadErrorMessage } from "../utils/compressImage";
 
 // step 0 : nhập ODO
 // step 1 : danh sách 6 ảnh cần chụp (chụp tự do, không theo thứ tự)
@@ -128,9 +129,10 @@ export default function CheckInOutWizard({ mode }) {
         formData.append("checkOutLongitude", position.coords.longitude);
       }
 
-      PHOTO_STEPS.forEach(({ key }) => {
-        formData.append(key, photos[key], `${key}.jpg`);
-      });
+      for (const { key } of PHOTO_STEPS) {
+        const compressed = await compressImage(photos[key]);
+        formData.append(key, compressed, `${key}.jpg`);
+      }
 
       if (isCheckIn) {
         await driverCheckIn(id, formData);
@@ -151,9 +153,7 @@ export default function CheckInOutWizard({ mode }) {
       }
 
       alert(
-        err.response?.data?.message ||
-          err.message ||
-          "Có lỗi xảy ra, vui lòng thử lại."
+        uploadErrorMessage(err, "Có lỗi xảy ra, vui lòng thử lại.")
       );
     } finally {
       setSubmitting(false);

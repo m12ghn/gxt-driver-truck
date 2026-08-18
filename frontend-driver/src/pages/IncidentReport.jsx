@@ -19,6 +19,7 @@ import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 
 import CameraCapture from "../components/CameraCapture";
 import { reportIncident } from "../api/assignmentApi";
+import { compressImage, uploadErrorMessage } from "../utils/compressImage";
 
 const MAX_PHOTOS = 4;
 
@@ -99,9 +100,10 @@ export default function IncidentReport() {
         formData.append("longitude", String(gps.longitude));
       }
 
-      photos.forEach((p, i) => {
-        formData.append("photos", p.blob, `incident-${i + 1}.jpg`);
-      });
+      for (let i = 0; i < photos.length; i++) {
+        const compressed = await compressImage(photos[i].blob);
+        formData.append("photos", compressed, `incident-${i + 1}.jpg`);
+      }
 
       await reportIncident(id, formData);
 
@@ -109,7 +111,7 @@ export default function IncidentReport() {
       navigate("/");
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Gửi báo cáo thất bại.");
+      alert(uploadErrorMessage(err, "Gửi báo cáo thất bại."));
     } finally {
       setSubmitting(false);
     }
