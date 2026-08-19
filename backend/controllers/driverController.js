@@ -2,6 +2,7 @@ const Driver = require("../models/Driver");
 const User = require("../models/User");
 const Assignment = require("../models/Assignment");
 const sequelize = require("../database/database");
+const { normalizeMsnv } = require("../utils/assignmentHelpers");
 
 // ==========================
 // DANH SÁCH TÀI XẾ
@@ -61,14 +62,15 @@ exports.createDriver = async (req, res) => {
   try {
 
     const {
-      msnv,
       hoTen,
-      soDienThoai,
       bangLai,
       loaiBang,
       kho,
       trangThai,
     } = req.body;
+
+    const msnv = normalizeMsnv(req.body.msnv);
+    const soDienThoai = String(req.body.soDienThoai || "").trim();
 
     // ======================
     // Kiểm tra Driver

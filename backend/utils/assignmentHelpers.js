@@ -16,20 +16,39 @@ function assignmentDays() {
 }
 
 function normalizeMsnv(value) {
-  return String(value || "").trim();
+  return String(value ?? "")
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .replace(/\.0+$/, "");
 }
 
 async function findDriversByMsnv(msnv) {
   const trimmed = normalizeMsnv(msnv);
   if (!trimmed) return [];
 
+  const digits = trimmed.replace(/\D/g, "");
+  const or = [
+    { msnv: trimmed },
+    sequelize.where(sequelize.fn("trim", sequelize.col("msnv")), trimmed),
+  ];
+
+  if (digits) {
+    or.push(
+      sequelize.where(
+        sequelize.fn(
+          "regexp_replace",
+          sequelize.fn("trim", sequelize.col("msnv")),
+          "[^0-9]",
+          "",
+          "g"
+        ),
+        digits
+      )
+    );
+  }
+
   return Driver.findAll({
-    where: {
-      [Op.or]: [
-        { msnv: trimmed },
-        sequelize.where(sequelize.fn("trim", sequelize.col("msnv")), trimmed),
-      ],
-    },
+    where: { [Op.or]: or },
   });
 }
 
