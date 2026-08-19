@@ -241,6 +241,7 @@ exports.exportExcel = async (req, res) => {
         : "",
       "Check Out - ODO": item.odoCheckOut ?? "",
       "User xác nhận": item.warehouseConfirmBy || "",
+      "Mã chuyến đi": item.maChuyenDi || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -628,6 +629,7 @@ exports.confirmWarehouse = async (req, res) => {
       action, // "confirm" | "reject"
       warehouseConfirmBy,
       warehouseReason,
+      maChuyenDi,
     } = req.body;
 
     if (!warehouseConfirmBy) {
@@ -639,13 +641,21 @@ exports.confirmWarehouse = async (req, res) => {
 
     if (action === "confirm") {
 
-      // Chuyến đã "Hoàn thành" (đã Check In + Check Out),
-      // kho xác nhận không làm thay đổi trangThai
+      const tripCode = String(maChuyenDi || "").trim();
+
+      if (!tripCode) {
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập mã chuyến đi trước khi xác nhận.",
+        });
+      }
+
       await assignment.update({
         warehouseStatus: "Đã xác nhận",
         warehouseReason: null,
         warehouseConfirmBy,
         warehouseConfirmTime: new Date(),
+        maChuyenDi: tripCode,
       });
 
       return res.json({

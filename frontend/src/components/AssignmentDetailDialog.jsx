@@ -395,6 +395,11 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
                     — {assignment.warehouseReason}
                   </Typography>
                 )}
+              {assignment.maChuyenDi && (
+                <Typography variant="body2" color="text.secondary">
+                  — Mã chuyến: {assignment.maChuyenDi}
+                </Typography>
+              )}
             </Stack>
           )}
         </Paper>

@@ -134,6 +134,20 @@ export default function WarehouseDetailDialog({
 
           )}
 
+          {assignment.maChuyenDi && (
+
+            <Grid size={{ xs: 12 }}>
+              <Typography>
+                <b>Mã chuyến đi</b>
+              </Typography>
+
+              <Typography>
+                {assignment.maChuyenDi}
+              </Typography>
+            </Grid>
+
+          )}
+
         </Grid>
 
       </DialogContent>

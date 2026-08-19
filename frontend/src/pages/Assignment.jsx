@@ -20,6 +20,7 @@ import {
 
 import AssignmentDialog from "../components/AssignmentDialog";
 import WarehouseRejectDialog from "../components/WarehouseRejectDialog";
+import WarehouseConfirmDialog from "../components/WarehouseConfirmDialog";
 import WarehouseDetailDialog from "../components/WarehouseDetailDialog";
 import AssignmentDetailDialog from "../components/AssignmentDetailDialog";
 
@@ -27,7 +28,6 @@ import {
   getAssignments,
   importAssignmentExcel,
   deleteAssignment,
-  confirmWarehouse,
   exportAssignmentExcel,
 } from "../api/assignmentApi";
 
@@ -73,6 +73,9 @@ export default function Assignment() {
   // ==========================
 
   const [openReject, setOpenReject] =
+    useState(false);
+
+  const [openConfirm, setOpenConfirm] =
     useState(false);
 
   const [openWarehouseDetail, setOpenWarehouseDetail] =
@@ -268,47 +271,10 @@ export default function Assignment() {
 
   }
 
-  async function handleConfirmWarehouse(item) {
-
-    const isReconfirm =
-      item.warehouseStatus === "Không xác nhận";
-
-    if (
-      !window.confirm(
-        isReconfirm
-          ? "Chuyến này đang Không xác nhận. Bạn muốn xác nhận lại?"
-          : "Xác nhận phân công này đã hoàn thành?"
-      )
-    ) {
-      return;
-    }
-
-    const user = JSON.parse(
-      localStorage.getItem("user")
-    );
-
-    try {
-
-      await confirmWarehouse(item.id, {
-        action: "confirm",
-        warehouseConfirmBy: user?.hoTen || "",
-      });
-
-      alert(isReconfirm ? "Đã xác nhận lại." : "Xác nhận thành công.");
-
-      loadAssignments();
-
-    } catch (err) {
-
-      console.error(err);
-
-      alert(
-        err.response?.data?.message ||
-        "Xác nhận thất bại."
-      );
-
-    }
-
+  function handleConfirmWarehouse(item) {
+    setSelectedAssignment(item);
+    setOpenWarehouseDetail(false);
+    setOpenConfirm(true);
   }
 
   if (loading) {
@@ -835,6 +801,17 @@ export default function Assignment() {
             sx={{ height: 24 }}
           />
 
+          {item.warehouseStatus === "Đã xác nhận" &&
+            item.maChuyenDi && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                Mã: {item.maChuyenDi}
+              </Typography>
+            )}
+
           {isWarehouse &&
             item.warehouseStatus === "Đã xác nhận" && (
               <Button
@@ -952,14 +929,20 @@ export default function Assignment() {
         onSuccess={handleAssignmentSuccess}
       />
 
+      <WarehouseConfirmDialog
+        open={openConfirm}
+        assignment={selectedAssignment}
+        onClose={() => setOpenConfirm(false)}
+        onSuccess={handleAssignmentSuccess}
+      />
+
       <WarehouseDetailDialog
         open={openWarehouseDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenWarehouseDetail(false)}
         canAdjust={isWarehouse}
-        onReconfirm={async (item) => {
-          await handleConfirmWarehouse(item);
-          setOpenWarehouseDetail(false);
+        onReconfirm={(item) => {
+          handleConfirmWarehouse(item);
         }}
         onReject={(item) => {
           setSelectedAssignment(item);

@@ -193,6 +193,11 @@ const Assignment = sequelize.define("Assignment", {
     type: DataTypes.DATE,
     allowNull: true,
   },
+
+  maChuyenDi: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 // ==========================
