@@ -270,9 +270,14 @@ export default function Assignment() {
 
   async function handleConfirmWarehouse(item) {
 
+    const isReconfirm =
+      item.warehouseStatus === "Không xác nhận";
+
     if (
       !window.confirm(
-        "Xác nhận phân công này đã hoàn thành?"
+        isReconfirm
+          ? "Chuyến này đang Không xác nhận. Bạn muốn xác nhận lại?"
+          : "Xác nhận phân công này đã hoàn thành?"
       )
     ) {
       return;
@@ -289,7 +294,7 @@ export default function Assignment() {
         warehouseConfirmBy: user?.hoTen || "",
       });
 
-      alert("Xác nhận thành công.");
+      alert(isReconfirm ? "Đã xác nhận lại." : "Xác nhận thành công.");
 
       loadAssignments();
 
@@ -804,6 +809,7 @@ export default function Assignment() {
           direction="row"
           spacing={1}
           alignItems="center"
+          flexWrap="wrap"
         >
 
           <Chip
@@ -815,6 +821,20 @@ export default function Assignment() {
             }
             size="small"
           />
+
+          {isWarehouse &&
+            item.warehouseStatus === "Không xác nhận" && (
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                onClick={() =>
+                  handleConfirmWarehouse(item)
+                }
+              >
+                Xác nhận lại
+              </Button>
+            )}
 
           <Button
             variant="text"
@@ -904,6 +924,11 @@ export default function Assignment() {
         open={openWarehouseDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenWarehouseDetail(false)}
+        canReconfirm={isWarehouse}
+        onReconfirm={async (item) => {
+          await handleConfirmWarehouse(item);
+          setOpenWarehouseDetail(false);
+        }}
       />
 
       <AssignmentDetailDialog

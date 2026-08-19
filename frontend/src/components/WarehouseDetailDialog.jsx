@@ -14,6 +14,8 @@ export default function WarehouseDetailDialog({
   open,
   onClose,
   assignment,
+  canReconfirm,
+  onReconfirm,
 }) {
   if (!assignment) return null;
 
@@ -140,6 +142,17 @@ export default function WarehouseDetailDialog({
         <Button onClick={onClose}>
           Đóng
         </Button>
+
+        {canReconfirm &&
+          assignment.warehouseStatus === "Không xác nhận" && (
+            <Button
+              variant="contained"
+              color="success"
+              onClick={() => onReconfirm?.(assignment)}
+            >
+              Xác nhận lại
+            </Button>
+          )}
 
       </DialogActions>
     </Dialog>
