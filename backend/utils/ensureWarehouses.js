@@ -76,9 +76,27 @@ function normalizeKhoName(kho) {
   return SHORT_TO_OFFICIAL[name] || name;
 }
 
+function getKhoNameVariants(kho) {
+  const name = String(kho || "").trim();
+  if (!name) return [];
+
+  const official = normalizeKhoName(name);
+  const variants = new Set([name, official]);
+
+  for (const [short, off] of Object.entries(SHORT_TO_OFFICIAL)) {
+    if (name === short || name === off || official === off) {
+      variants.add(short);
+      variants.add(off);
+    }
+  }
+
+  return [...variants];
+}
+
 module.exports = {
   ensureWarehouses,
   findWarehouseByName,
   SHORT_TO_OFFICIAL,
   normalizeKhoName,
+  getKhoNameVariants,
 };

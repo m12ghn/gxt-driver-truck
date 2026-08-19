@@ -242,7 +242,11 @@ export default function Dashboard() {
             </Typography>
 
             <Typography sx={{ opacity: 0.85, mt: 0.5 }}>
-              Tổng quan hoạt động ngày{" "}
+              Tổng quan hoạt động
+              {user?.quyen === "WAREHOUSE" && (stats.kho || user?.kho)
+                ? ` ${stats.kho || user.kho}`
+                : ""}{" "}
+              ngày{" "}
               {new Date().toLocaleDateString("vi-VN", {
                 weekday: "long",
                 day: "2-digit",

@@ -5,18 +5,21 @@ const Assignment = require("../models/Assignment");
 const Vehicle = require("../models/Vehicle");
 const Driver = require("../models/Driver");
 
-const { markOverdueAssignments } = require("../utils/assignmentHelpers");
+const { markOverdueAssignments, vietnamToday } = require("../utils/assignmentHelpers");
+const {
+  applyWarehouseScope,
+  getScopedKho,
+  warehouseKhoFilter,
+} = require("../utils/scopeHelpers");
 const {
   getCheckInStatus,
   getMissingCheckInAlert,
 } = require("../utils/shiftHelpers");
-const {
-  applyWarehouseScope,
-  getScopedKho,
-} = require("../utils/scopeHelpers");
 
-function toDateStr(date) {
-  return date.toISOString().split("T")[0];
+function vnDateStr(date = new Date()) {
+  return date.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
 }
 
 function hasGpsViolation(item) {
@@ -72,12 +75,12 @@ exports.getDashboardStats = async (req, res) => {
   try {
     await markOverdueAssignments();
 
-    const today = new Date();
-    const todayStr = toDateStr(today);
+    const todayStr = vietnamToday();
+    const today = new Date(`${todayStr}T12:00:00+07:00`);
 
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    const fromStr = toDateStr(sevenDaysAgo);
+    const fromStr = vnDateStr(sevenDaysAgo);
 
     const where = applyWarehouseScope(req, {
       ngay: { [Op.between]: [fromStr, todayStr] },
@@ -94,13 +97,12 @@ exports.getDashboardStats = async (req, res) => {
 
     const todaySummary = summarize(todayAssignments);
 
-    // Xu hướng 7 ngày gần nhất (kể cả hôm nay)
     const trend = [];
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const dStr = toDateStr(d);
+      const dStr = vnDateStr(d);
 
       const dayAssignments = assignments.filter(
         (item) => item.ngay === dStr
@@ -117,14 +119,19 @@ exports.getDashboardStats = async (req, res) => {
       });
     }
 
-    const totalVehicles = await Vehicle.count();
+    const scopedKho = getScopedKho(req);
+    const resourceWhere = scopedKho
+      ? { kho: warehouseKhoFilter(scopedKho) }
+      : {};
+
+    const totalVehicles = await Vehicle.count({ where: resourceWhere });
     const activeVehicles = await Vehicle.count({
-      where: { trangThai: "Hoạt động" },
+      where: { ...resourceWhere, trangThai: "Hoạt động" },
     });
 
-    const totalDrivers = await Driver.count();
+    const totalDrivers = await Driver.count({ where: resourceWhere });
     const activeDrivers = await Driver.count({
-      where: { trangThai: "Đang làm" },
+      where: { ...resourceWhere, trangThai: "Đang làm" },
     });
 
     res.json({
@@ -134,6 +141,7 @@ exports.getDashboardStats = async (req, res) => {
         vehicles: { total: totalVehicles, active: activeVehicles },
         drivers: { total: totalDrivers, active: activeDrivers },
         trend,
+        kho: scopedKho,
       },
     });
   } catch (err) {
@@ -155,7 +163,7 @@ exports.getAlerts = async (req, res) => {
   try {
     await markOverdueAssignments();
 
-    const todayStr = toDateStr(new Date());
+    const todayStr = vietnamToday();
 
     const [todayAssignments, pendingWarehouse] = await Promise.all([
       Assignment.findAll({

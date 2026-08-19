@@ -92,7 +92,7 @@ export default function MainLayout() {
       text: "Dashboard",
       icon: <DashboardIcon />,
       path: "/dashboard",
-      roles: ["SUPER_ADMIN", "ADMIN"],
+      roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
       badge: alertCounts.total,
     },
     {
