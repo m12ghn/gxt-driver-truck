@@ -617,7 +617,7 @@ export default function Assignment() {
             WebkitOverflowScrolling: "touch",
           }}
         >
-        <Table size="small" sx={{ minWidth: 1200 }}>
+        <Table size="small" sx={{ minWidth: 1400 }}>
 
           <TableHead>
 
@@ -721,7 +721,7 @@ export default function Assignment() {
 
     </TableCell>
 
-    <TableCell>
+    <TableCell sx={{ whiteSpace: "nowrap", verticalAlign: "middle" }}>
 
       {!item.warehouseStatus && (
         <Typography
@@ -739,11 +739,14 @@ export default function Assignment() {
           <Stack
             direction="row"
             spacing={1}
+            alignItems="center"
+            sx={{ flexWrap: "nowrap" }}
           >
 
             <Button
               variant="outlined"
               size="small"
+              sx={{ whiteSpace: "nowrap" }}
               onClick={() => {
                 setSelectedAssignment(item);
                 setOpenAssignmentDetail(true);
@@ -756,6 +759,7 @@ export default function Assignment() {
               variant="contained"
               color="success"
               size="small"
+              sx={{ whiteSpace: "nowrap" }}
               onClick={() =>
                 handleConfirmWarehouse(item)
               }
@@ -767,6 +771,7 @@ export default function Assignment() {
               variant="outlined"
               color="error"
               size="small"
+              sx={{ whiteSpace: "nowrap" }}
               onClick={() => {
                 setSelectedAssignment(item);
                 setOpenReject(true);
@@ -779,16 +784,23 @@ export default function Assignment() {
 
         ) : (
 
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ flexWrap: "nowrap" }}
+          >
             <Chip
               label="Chờ xác nhận"
               color="warning"
               size="small"
+              sx={{ height: 24 }}
             />
 
             <Button
               variant="text"
               size="small"
+              sx={{ whiteSpace: "nowrap", minWidth: "auto" }}
               onClick={() => {
                 setSelectedAssignment(item);
                 setOpenAssignmentDetail(true);
@@ -809,7 +821,7 @@ export default function Assignment() {
           direction="row"
           spacing={1}
           alignItems="center"
-          flexWrap="wrap"
+          sx={{ flexWrap: "nowrap" }}
         >
 
           <Chip
@@ -820,6 +832,7 @@ export default function Assignment() {
                 : "error"
             }
             size="small"
+            sx={{ height: 24 }}
           />
 
           {isWarehouse &&
@@ -828,6 +841,7 @@ export default function Assignment() {
                 variant="contained"
                 color="success"
                 size="small"
+                sx={{ whiteSpace: "nowrap" }}
                 onClick={() =>
                   handleConfirmWarehouse(item)
                 }
@@ -839,6 +853,7 @@ export default function Assignment() {
           <Button
             variant="text"
             size="small"
+            sx={{ whiteSpace: "nowrap", minWidth: "auto" }}
             onClick={() => {
               setSelectedAssignment(item);
               setOpenWarehouseDetail(true);
@@ -850,6 +865,7 @@ export default function Assignment() {
           <Button
             variant="text"
             size="small"
+            sx={{ whiteSpace: "nowrap", minWidth: "auto" }}
             onClick={() => {
               setSelectedAssignment(item);
               setOpenAssignmentDetail(true);
