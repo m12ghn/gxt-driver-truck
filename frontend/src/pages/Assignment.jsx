@@ -836,6 +836,22 @@ export default function Assignment() {
           />
 
           {isWarehouse &&
+            item.warehouseStatus === "Đã xác nhận" && (
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                sx={{ whiteSpace: "nowrap" }}
+                onClick={() => {
+                  setSelectedAssignment(item);
+                  setOpenReject(true);
+                }}
+              >
+                Không xác nhận
+              </Button>
+            )}
+
+          {isWarehouse &&
             item.warehouseStatus === "Không xác nhận" && (
               <Button
                 variant="contained"
@@ -940,10 +956,15 @@ export default function Assignment() {
         open={openWarehouseDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenWarehouseDetail(false)}
-        canReconfirm={isWarehouse}
+        canAdjust={isWarehouse}
         onReconfirm={async (item) => {
           await handleConfirmWarehouse(item);
           setOpenWarehouseDetail(false);
+        }}
+        onReject={(item) => {
+          setSelectedAssignment(item);
+          setOpenWarehouseDetail(false);
+          setOpenReject(true);
         }}
       />
 

@@ -46,7 +46,11 @@ export default function WarehouseRejectDialog({
         warehouseReason,
       });
 
-      alert("Đã ghi nhận không xác nhận.");
+      alert(
+        assignment.warehouseStatus === "Đã xác nhận"
+          ? "Đã điều chỉnh sang Không xác nhận."
+          : "Đã ghi nhận không xác nhận."
+      );
 
       if (onSuccess) {
         onSuccess();
@@ -75,7 +79,9 @@ export default function WarehouseRejectDialog({
       maxWidth="sm"
     >
       <DialogTitle>
-        Không xác nhận phân công
+        {assignment?.warehouseStatus === "Đã xác nhận"
+          ? "Điều chỉnh: không xác nhận"
+          : "Không xác nhận phân công"}
       </DialogTitle>
 
       <DialogContent>
