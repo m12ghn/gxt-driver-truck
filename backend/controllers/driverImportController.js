@@ -88,6 +88,7 @@ exports.importExcel = async (req, res) => {
           where: {
             msnv,
           },
+          transaction,
         });
 
       if (existedDriverMSNV) {
@@ -105,6 +106,7 @@ exports.importExcel = async (req, res) => {
           where: {
             soDienThoai,
           },
+          transaction,
         });
 
       if (existedDriverPhone) {
@@ -126,6 +128,7 @@ exports.importExcel = async (req, res) => {
           where: {
             msnv,
           },
+          transaction,
         });
 
       if (existedUserMSNV) {
@@ -143,6 +146,7 @@ exports.importExcel = async (req, res) => {
           where: {
             soDienThoai,
           },
+          transaction,
         });
 
       if (existedUserPhone) {

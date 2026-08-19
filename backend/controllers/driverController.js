@@ -78,6 +78,7 @@ exports.createDriver = async (req, res) => {
       where: {
         msnv,
       },
+      transaction,
     });
 
     if (existedDriverMSNV) {
@@ -95,6 +96,7 @@ exports.createDriver = async (req, res) => {
       where: {
         soDienThoai,
       },
+      transaction,
     });
 
     if (existedDriverPhone) {
@@ -116,6 +118,7 @@ exports.createDriver = async (req, res) => {
       where: {
         msnv,
       },
+      transaction,
     });
 
     if (existedUserMSNV) {
@@ -133,6 +136,7 @@ exports.createDriver = async (req, res) => {
       where: {
         soDienThoai,
       },
+      transaction,
     });
 
     if (existedUserPhone) {
@@ -222,7 +226,7 @@ exports.updateDriver = async (req, res) => {
 
   try {
 
-    const driver = await Driver.findByPk(req.params.id);
+    const driver = await Driver.findByPk(req.params.id, { transaction });
 
     if (!driver) {
 
@@ -254,6 +258,7 @@ exports.updateDriver = async (req, res) => {
 
     const existedDriverMSNV = await Driver.findOne({
       where: { msnv },
+      transaction,
     });
 
     if (
@@ -274,6 +279,7 @@ exports.updateDriver = async (req, res) => {
       where: {
         soDienThoai,
       },
+      transaction,
     });
 
     if (
@@ -296,6 +302,7 @@ exports.updateDriver = async (req, res) => {
 
     const existedUserMSNV = await User.findOne({
       where: { msnv },
+      transaction,
     });
 
     if (
@@ -316,6 +323,7 @@ exports.updateDriver = async (req, res) => {
       where: {
         soDienThoai,
       },
+      transaction,
     });
 
     if (
@@ -417,7 +425,7 @@ exports.changeStatus = async (req, res) => {
 
   try {
 
-    const driver = await Driver.findByPk(req.params.id);
+    const driver = await Driver.findByPk(req.params.id, { transaction });
 
     if (!driver) {
 
