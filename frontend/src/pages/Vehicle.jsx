@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   getVehicles,
   deleteVehicle,
+  importVehicleExcel,
+  downloadVehicleTemplate,
 } from "../api/vehicleApi";
 
 import VehicleDialog from "../components/VehicleDialog";
@@ -74,6 +76,50 @@ export default function Vehicle() {
     }
   };
 
+  async function handleDownloadTemplate() {
+    try {
+      const res = await downloadVehicleTemplate();
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "mau-danh-sach-xe.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Tải mẫu Excel thất bại.");
+    }
+  }
+
+  async function handleImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const res = await importVehicleExcel(file);
+      let message = `✅ Import thành công ${res.data.imported} dòng`;
+
+      if (res.data.created || res.data.updated) {
+        message += ` (thêm mới ${res.data.created || 0}, cập nhật ${res.data.updated || 0})`;
+      }
+
+      if (res.data.errors && res.data.errors.length > 0) {
+        message += `\n\n❌ Có ${res.data.errors.length} lỗi:\n\n`;
+        message += res.data.errors.join("\n");
+      }
+
+      alert(message);
+      loadVehicles();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Import thất bại");
+    }
+
+    event.target.value = "";
+  }
+
   if (loading) {
     return <CircularProgress />;
   }
@@ -88,9 +134,25 @@ export default function Vehicle() {
       >
         <Typography variant="h4">Quản lý xe</Typography>
 
-        <Button variant="contained" onClick={handleAdd}>
-          + THÊM XE
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={handleDownloadTemplate}>
+            TẢI MẪU
+          </Button>
+
+          <Button variant="outlined" component="label">
+            IMPORT EXCEL
+            <input
+              hidden
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+            />
+          </Button>
+
+          <Button variant="contained" onClick={handleAdd}>
+            + THÊM XE
+          </Button>
+        </Stack>
       </Stack>
 
       <Paper>
