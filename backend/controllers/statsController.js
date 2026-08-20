@@ -16,6 +16,21 @@ const {
   getMissingCheckInAlert,
 } = require("../utils/shiftHelpers");
 
+const ASSIGNMENT_STATS_ATTRS = [
+  "id",
+  "ngay",
+  "ca",
+  "kho",
+  "trangThai",
+  "checkInTime",
+  "checkInGpsValid",
+  "checkOutGpsValid",
+  "warehouseStatus",
+];
+
+const DRIVER_MIN_ATTRS = ["id", "msnv", "hoTen"];
+const VEHICLE_MIN_ATTRS = ["id", "bienSo"];
+
 function vnDateStr(date = new Date()) {
   return date.toLocaleDateString("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
@@ -73,7 +88,9 @@ function summarize(assignments) {
 // ==============================
 exports.getDashboardStats = async (req, res) => {
   try {
-    await markOverdueAssignments();
+    markOverdueAssignments().catch((err) =>
+      console.error("markOverdueAssignments:", err.message)
+    );
 
     const todayStr = vietnamToday();
     const today = new Date(`${todayStr}T12:00:00+07:00`);
@@ -86,10 +103,25 @@ exports.getDashboardStats = async (req, res) => {
       ngay: { [Op.between]: [fromStr, todayStr] },
     });
 
-    const assignments = await Assignment.findAll({
-      where,
-      include: [Vehicle, Driver],
-    });
+    const scopedKho = getScopedKho(req);
+    const resourceWhere = scopedKho
+      ? { kho: warehouseKhoFilter(scopedKho) }
+      : {};
+
+    const [assignments, vehicles, drivers] = await Promise.all([
+      Assignment.findAll({
+        where,
+        attributes: ASSIGNMENT_STATS_ATTRS,
+      }),
+      Vehicle.findAll({
+        where: resourceWhere,
+        attributes: ["trangThai"],
+      }),
+      Driver.findAll({
+        where: resourceWhere,
+        attributes: ["trangThai"],
+      }),
+    ]);
 
     const todayAssignments = assignments.filter(
       (item) => item.ngay === todayStr
@@ -119,20 +151,14 @@ exports.getDashboardStats = async (req, res) => {
       });
     }
 
-    const scopedKho = getScopedKho(req);
-    const resourceWhere = scopedKho
-      ? { kho: warehouseKhoFilter(scopedKho) }
-      : {};
-
-    const totalVehicles = await Vehicle.count({ where: resourceWhere });
-    const activeVehicles = await Vehicle.count({
-      where: { ...resourceWhere, trangThai: "Hoạt động" },
-    });
-
-    const totalDrivers = await Driver.count({ where: resourceWhere });
-    const activeDrivers = await Driver.count({
-      where: { ...resourceWhere, trangThai: "Đang làm" },
-    });
+    const totalVehicles = vehicles.length;
+    const activeVehicles = vehicles.filter(
+      (item) => item.trangThai === "Hoạt động"
+    ).length;
+    const totalDrivers = drivers.length;
+    const activeDrivers = drivers.filter(
+      (item) => item.trangThai === "Đang làm"
+    ).length;
 
     res.json({
       success: true,
@@ -161,21 +187,30 @@ exports.getDashboardStats = async (req, res) => {
 // ==============================
 exports.getAlerts = async (req, res) => {
   try {
-    await markOverdueAssignments();
+    markOverdueAssignments().catch((err) =>
+      console.error("markOverdueAssignments:", err.message)
+    );
 
     const todayStr = vietnamToday();
+
+    const includeMin = [
+      { model: Vehicle, attributes: VEHICLE_MIN_ATTRS },
+      { model: Driver, attributes: DRIVER_MIN_ATTRS },
+    ];
 
     const [todayAssignments, pendingWarehouse] = await Promise.all([
       Assignment.findAll({
         where: applyWarehouseScope(req, { ngay: todayStr }),
-        include: [Vehicle, Driver],
+        attributes: ASSIGNMENT_STATS_ATTRS,
+        include: includeMin,
         order: [["updatedAt", "DESC"]],
       }),
       Assignment.findAll({
         where: applyWarehouseScope(req, {
           warehouseStatus: "Chờ xác nhận",
         }),
-        include: [Vehicle, Driver],
+        attributes: ASSIGNMENT_STATS_ATTRS,
+        include: includeMin,
         order: [["checkOutTime", "DESC"]],
         limit: 50,
       }),

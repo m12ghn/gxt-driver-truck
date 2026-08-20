@@ -85,12 +85,11 @@ export default function Dashboard() {
     else setRefreshing(true);
 
     try {
-      const [statsRes, alertsRes] = await Promise.all([
-        getDashboardStats(),
-        getAlerts(),
-      ]);
-
+      const statsRes = await getDashboardStats();
       setStats(statsRes.data.data);
+      setLoading(false);
+
+      const alertsRes = await getAlerts();
       setAlerts(alertsRes.data.data || { counts: {}, items: [] });
       setRefreshedAt(new Date());
     } catch (err) {

@@ -70,14 +70,15 @@ export default function MainLayout() {
       }
     }
 
-    loadAlerts();
+    const start = setTimeout(loadAlerts, 1500);
     const timer = setInterval(loadAlerts, ALERT_POLL_MS);
 
     return () => {
       cancelled = true;
+      clearTimeout(start);
       clearInterval(timer);
     };
-  }, [location.pathname]);
+  }, []);
 
   function handleLogout() {
     const ok = window.confirm("Bạn có muốn đăng xuất?");

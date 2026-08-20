@@ -107,16 +107,7 @@ app.use(async (req, res, next) => {
 
   try {
     await ensureConnected();
-
-    if (isAuthRoute(req)) {
-      kickWarmup();
-    } else {
-      await Promise.all([
-        ensureWarehouses(),
-        ensureAssignmentColumns(),
-      ]);
-    }
-
+    kickWarmup();
     next();
   } catch (err) {
     console.error("❌ Database Error:", err);
