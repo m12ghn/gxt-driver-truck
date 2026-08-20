@@ -18,6 +18,7 @@ const {
   applyWarehouseScope,
   assertWarehouseAccess,
 } = require("../utils/scopeHelpers");
+const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 const {
   withReadablePhotos,
@@ -442,6 +443,10 @@ exports.checkIn = async (req, res) => {
       checkInLongitude,
     });
 
+    await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckIn).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
+
     res.json({
       success: true,
       message: "Check In thành công.",
@@ -505,6 +510,10 @@ exports.checkOut = async (req, res) => {
       checkOutLongitude,
       warehouseStatus: "Chờ xác nhận",
     });
+
+    await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckOut).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
 
     res.json({
       success: true,
@@ -581,6 +590,10 @@ exports.adminCheckOut = async (req, res) => {
       adminCheckoutReason,
       warehouseStatus: "Chờ xác nhận",
     });
+
+    await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckOut).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
 
     res.json({
       success: true,

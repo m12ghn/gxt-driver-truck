@@ -16,6 +16,7 @@ const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
 const { findWarehouseByName } = require("../utils/ensureWarehouses");
 const { withReadablePhotosList } = require("../utils/uploadToSupabase");
+const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 
 function publicErrorMessage(err, fallback) {
   const msg = err?.message || "";
@@ -213,6 +214,10 @@ exports.driverCheckIn = async (req, res) => {
       checkInPhotos,
     });
 
+    await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckIn).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
+
     res.json({
       success: true,
       message: "Check In thành công.",
@@ -336,6 +341,10 @@ exports.driverCheckOut = async (req, res) => {
       checkOutPhotos,
       warehouseStatus: "Chờ xác nhận",
     });
+
+    await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckOut).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
 
     res.json({
       success: true,

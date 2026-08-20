@@ -1,8 +1,13 @@
 const Vehicle = require("../models/Vehicle");
+const { backfillVehicleKmFromAssignments } = require("../utils/syncVehicleKm");
 
 // Lấy danh sách xe
 exports.getVehicles = async (req, res) => {
   try {
+    await backfillVehicleKmFromAssignments().catch((err) =>
+      console.error("backfillVehicleKmFromAssignments:", err.message)
+    );
+
     const vehicles = await Vehicle.findAll({
       order: [["id", "DESC"]],
     });
