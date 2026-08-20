@@ -1,5 +1,3 @@
-const { Op } = require("sequelize");
-
 const sequelize = require("../database/database");
 const User = require("../models/User");
 const Driver = require("../models/Driver");
@@ -34,13 +32,11 @@ function phonesMatch(a, b) {
 }
 
 function findByMsnv(Model, msnv) {
-  return Model.findOne({
-    where: {
-      [Op.or]: [
-        { msnv },
-        sequelize.where(sequelize.fn("trim", sequelize.col("msnv")), msnv),
-      ],
-    },
+  return Model.findOne({ where: { msnv } }).then((row) => {
+    if (row) return row;
+    return Model.findOne({
+      where: sequelize.where(sequelize.fn("trim", sequelize.col("msnv")), msnv),
+    });
   });
 }
 
@@ -53,22 +49,6 @@ exports.adminLogin = async (req, res) => {
 
     const { taiKhoan, matKhau } = req.body;
 
-    // TEMP DEBUG — reveals only lengths/booleans, never actual values.
-    // Remove this block once the SUPER_ADMIN login mismatch is solved.
-    console.log("DEBUG adminLogin:", {
-      inputUserLen: taiKhoan?.length,
-      inputPassLen: matKhau?.length,
-      envUserSet: process.env.SUPER_ADMIN_USER !== undefined,
-      envUserLen: process.env.SUPER_ADMIN_USER?.length,
-      envPassSet: process.env.SUPER_ADMIN_PASS !== undefined,
-      envPassLen: process.env.SUPER_ADMIN_PASS?.length,
-      userMatches: taiKhoan === process.env.SUPER_ADMIN_USER,
-      passMatches: matKhau === process.env.SUPER_ADMIN_PASS,
-    });
-
-    // ==========================
-    // SUPER ADMIN
-    // ==========================
     if (
       taiKhoan === process.env.SUPER_ADMIN_USER &&
       matKhau === process.env.SUPER_ADMIN_PASS
@@ -138,8 +118,11 @@ exports.driverLogin = async (req, res) => {
       });
     }
 
-    const driver = await findByMsnv(Driver, msnv);
-    let user = await findByMsnv(User, msnv);
+    const [driver, foundUser] = await Promise.all([
+      findByMsnv(Driver, msnv),
+      findByMsnv(User, msnv),
+    ]);
+    let user = foundUser;
 
     if (user && String(user.quyen || "").toUpperCase() !== "DRIVER") {
       if (driver) {

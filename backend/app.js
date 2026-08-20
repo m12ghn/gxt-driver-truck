@@ -6,7 +6,6 @@ const cors = require("cors");
 const sequelize = require("./database/database");
 const { ensureWarehouses } = require("./utils/ensureWarehouses");
 const { ensureAssignmentColumns } = require("./utils/ensureAssignmentColumns");
-const { ensureStorageBucket } = require("./utils/uploadToSupabase");
 
 // ==============================
 // Models
@@ -49,6 +48,22 @@ function skipDatabase(req) {
   );
 }
 
+function isAuthRoute(req) {
+  const url = req.originalUrl || req.path || "";
+  return /\/api\/auth\//.test(url) || /\/auth\//.test(url);
+}
+
+function isSuperAdminLogin(req) {
+  if (!isAuthRoute(req) || !/admin-login/.test(req.originalUrl || req.path || "")) {
+    return false;
+  }
+
+  return (
+    req.body?.taiKhoan === process.env.SUPER_ADMIN_USER &&
+    req.body?.matKhau === process.env.SUPER_ADMIN_PASS
+  );
+}
+
 function publicDbError(err) {
   const msg = err?.message || "";
   if (/EMAXCONNSESSION|max clients reached|too many clients/i.test(msg)) {
@@ -57,51 +72,51 @@ function publicDbError(err) {
   return "Database connection error";
 }
 
-// ==============================
-// DATABASE
-// Không gọi sequelize.sync() trên Vercel: schema đã có, sync() giữ
-// connection lâu và dễ làm đầy pool 15 slot của Supabase session mode.
-// ==============================
 let connected = false;
+let warmupStarted = false;
 
 async function ensureConnected() {
   if (connected) return;
 
-  if (process.env.VERCEL) {
-    await sequelize.authenticate();
-  } else {
+  if (!process.env.VERCEL) {
     await sequelize.sync();
   }
 
   connected = true;
-  console.log("✅ Database Connected");
+}
 
-  try {
-    await ensureWarehouses();
-  } catch (err) {
-    console.error("⚠️  Seed warehouses failed:", err.message);
-  }
+function kickWarmup() {
+  if (warmupStarted) return;
+  warmupStarted = true;
 
-  try {
-    await ensureAssignmentColumns();
-  } catch (err) {
-    console.error("⚠️  Ensure assignment columns failed:", err.message);
-  }
-
-  try {
-    await ensureStorageBucket();
-  } catch (err) {
-    console.error("⚠️  Storage bucket setup failed:", err.message);
-  }
+  Promise.resolve()
+    .then(() => ensureConnected())
+    .then(() => ensureWarehouses())
+    .then(() => ensureAssignmentColumns())
+    .catch((err) => {
+      warmupStarted = false;
+      console.error("⚠️  Warmup failed:", err.message);
+    });
 }
 
 app.use(async (req, res, next) => {
-  if (skipDatabase(req)) {
+  if (skipDatabase(req) || isSuperAdminLogin(req)) {
+    kickWarmup();
     return next();
   }
 
   try {
     await ensureConnected();
+
+    if (isAuthRoute(req)) {
+      kickWarmup();
+    } else {
+      await Promise.all([
+        ensureWarehouses(),
+        ensureAssignmentColumns(),
+      ]);
+    }
+
     next();
   } catch (err) {
     console.error("❌ Database Error:", err);

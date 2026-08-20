@@ -17,6 +17,12 @@ let ensured = false;
 async function ensureWarehouses() {
   if (ensured) return;
 
+  const existingCount = await Warehouse.count();
+  if (existingCount >= DEFAULT_WAREHOUSES.length) {
+    ensured = true;
+    return;
+  }
+
   for (const item of DEFAULT_WAREHOUSES) {
     const officialName = SHORT_TO_OFFICIAL[item.ten];
     const official = officialName
