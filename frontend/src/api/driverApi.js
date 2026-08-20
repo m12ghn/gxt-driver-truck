@@ -41,3 +41,20 @@ export const changeDriverStatus = (id) => {
 export const deleteDriver = (id) => {
   return api.delete(`/drivers/${id}`);
 };
+
+export const importDriverExcel = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return api.post("/drivers/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+export const downloadDriverTemplate = () => {
+  return api.get("/drivers/template", {
+    responseType: "blob",
+  });
+};

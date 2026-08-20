@@ -4,9 +4,9 @@ const router = express.Router();
 const driverController = require("../controllers/driverController");
 const driverImportController = require("../controllers/driverImportController");
 const upload = require("../middlewares/uploadExcel");
-// ==============================
-// Import Excel
-// ==============================
+
+router.get("/template", driverImportController.downloadTemplate);
+
 router.post(
   "/import",
   upload.single("file"),
