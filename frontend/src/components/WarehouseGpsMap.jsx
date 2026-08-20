@@ -4,11 +4,13 @@ import {
   MapContainer,
   TileLayer,
   Circle,
-  CircleMarker,
+  Marker,
   Popup,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/mapIcons.css";
+import { warehouseIcon, truckIcon, truckPinColor } from "../utils/mapIcons";
 
 function FitBounds({ points }) {
   const map = useMap();
@@ -154,35 +156,23 @@ export default function WarehouseGpsMap({
                   weight: 2,
                 }}
               />
-              <CircleMarker
-                center={[warehouse.latitude, warehouse.longitude]}
-                radius={8}
-                pathOptions={{
-                  color: "#0F9B94",
-                  fillColor: "#0F9B94",
-                  fillOpacity: 1,
-                  weight: 2,
-                }}
+              <Marker
+                position={[warehouse.latitude, warehouse.longitude]}
+                icon={warehouseIcon()}
               >
                 <Popup>
                   Kho {warehouse.ten}
                   <br />
                   Bán kính cho phép: {radius}m
                 </Popup>
-              </CircleMarker>
+              </Marker>
             </>
           )}
 
           {checkIn?.lat != null && checkIn?.lng != null && (
-            <CircleMarker
-              center={[checkIn.lat, checkIn.lng]}
-              radius={9}
-              pathOptions={{
-                color: checkIn.valid === false ? "#ed6c02" : "#0F9B94",
-                fillColor: checkIn.valid === false ? "#ed6c02" : "#0F9B94",
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+            <Marker
+              position={[checkIn.lat, checkIn.lng]}
+              icon={truckIcon(truckPinColor({ type: "in", valid: checkIn.valid }))}
             >
               <Popup>
                 Check In
@@ -192,19 +182,13 @@ export default function WarehouseGpsMap({
                     ? " — Đúng tọa độ"
                     : ""}
               </Popup>
-            </CircleMarker>
+            </Marker>
           )}
 
           {checkOut?.lat != null && checkOut?.lng != null && (
-            <CircleMarker
-              center={[checkOut.lat, checkOut.lng]}
-              radius={9}
-              pathOptions={{
-                color: checkOut.valid === false ? "#c62828" : "#ef6c00",
-                fillColor: checkOut.valid === false ? "#c62828" : "#ef6c00",
-                fillOpacity: 0.95,
-                weight: 2,
-              }}
+            <Marker
+              position={[checkOut.lat, checkOut.lng]}
+              icon={truckIcon(truckPinColor({ type: "out", valid: checkOut.valid }))}
             >
               <Popup>
                 Check Out
@@ -214,7 +198,7 @@ export default function WarehouseGpsMap({
                     ? " — Đúng tọa độ"
                     : ""}
               </Popup>
-            </CircleMarker>
+            </Marker>
           )}
         </MapContainer>
       </Box>

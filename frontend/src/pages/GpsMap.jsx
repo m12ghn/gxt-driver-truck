@@ -16,16 +16,24 @@ import {
   MapContainer,
   TileLayer,
   Circle,
-  CircleMarker,
+  Marker,
   Popup,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import "../utils/mapIcons.css";
 
 import { getAssignments } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
 import { officialWarehouseNames } from "../constants/warehouses";
 import { brand } from "../theme/brand";
+import {
+  warehouseIcon,
+  truckIcon,
+  truckPinColor,
+  WAREHOUSE_SVG,
+  TRUCK_SVG,
+} from "../utils/mapIcons";
 
 function FitAll({ points }) {
   const map = useMap();
@@ -182,8 +190,66 @@ export default function GpsMap() {
         </Stack>
 
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mt={2}>
-          <Chip size="small" label={`${pins.filter((p) => p.type === "in").length} Check In`} />
-          <Chip size="small" label={`${pins.filter((p) => p.type === "out").length} Check Out`} />
+          <Chip
+            size="small"
+            icon={
+              <Box
+                component="span"
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  bgcolor: brand.teal,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  "& svg": { display: "block" },
+                }}
+                dangerouslySetInnerHTML={{ __html: WAREHOUSE_SVG }}
+              />
+            }
+            label={`${activeWarehouses.length} kho`}
+          />
+          <Chip
+            size="small"
+            icon={
+              <Box
+                component="span"
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  bgcolor: brand.teal,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  "& svg": { display: "block" },
+                }}
+                dangerouslySetInnerHTML={{ __html: TRUCK_SVG }}
+              />
+            }
+            label={`${pins.filter((p) => p.type === "in").length} Check In`}
+          />
+          <Chip
+            size="small"
+            icon={
+              <Box
+                component="span"
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  bgcolor: "#ef6c00",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  "& svg": { display: "block" },
+                }}
+                dangerouslySetInnerHTML={{ __html: TRUCK_SVG }}
+              />
+            }
+            label={`${pins.filter((p) => p.type === "out").length} Check Out`}
+          />
           <Chip
             size="small"
             color="warning"
@@ -221,44 +287,25 @@ export default function GpsMap() {
                   weight: 2,
                 }}
               />
-              <CircleMarker
-                center={[w.latitude, w.longitude]}
-                radius={7}
-                pathOptions={{
-                  color: brand.teal,
-                  fillColor: brand.teal,
-                  fillOpacity: 1,
-                }}
+              <Marker
+                position={[w.latitude, w.longitude]}
+                icon={warehouseIcon()}
               >
                 <Popup>
                   Kho {w.ten} · bán kính {w.banKinh}m
                 </Popup>
-              </CircleMarker>
+              </Marker>
             </Fragment>
           ))}
 
           {pins.map((p) => {
-            const ok = p.valid !== false;
-            const color =
-              p.type === "in"
-                ? ok
-                  ? brand.teal
-                  : "#ed6c02"
-                : ok
-                  ? "#ef6c00"
-                  : "#c62828";
+            const color = truckPinColor(p);
 
             return (
-              <CircleMarker
+              <Marker
                 key={p.key}
-                center={[p.lat, p.lng]}
-                radius={8}
-                pathOptions={{
-                  color,
-                  fillColor: color,
-                  fillOpacity: 0.95,
-                  weight: 2,
-                }}
+                position={[p.lat, p.lng]}
+                icon={truckIcon(color)}
               >
                 <Popup>
                   <b>
@@ -271,7 +318,7 @@ export default function GpsMap() {
                   <br />
                   {p.assignment.kho} · {p.assignment.ca}
                 </Popup>
-              </CircleMarker>
+              </Marker>
             );
           })}
         </MapContainer>
