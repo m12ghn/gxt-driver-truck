@@ -23,6 +23,7 @@ const ASSIGNMENT_STATS_ATTRS = [
   "kho",
   "trangThai",
   "checkInTime",
+  "checkOutTime",
   "checkInGpsValid",
   "checkOutGpsValid",
   "warehouseStatus",
@@ -212,13 +213,12 @@ exports.getAlerts = async (req, res) => {
         attributes: ASSIGNMENT_STATS_ATTRS,
         include: includeMin,
         order: [["checkOutTime", "DESC"]],
-        limit: 50,
       }),
     ]);
 
     const items = [];
 
-    function pushItem(item, type, label, detail) {
+    function pushItem(item, type, label, detail, extra = {}) {
       items.push({
         id: item.id,
         type,
@@ -231,6 +231,8 @@ exports.getAlerts = async (req, res) => {
         driverName: item.Driver?.hoTen || "—",
         driverMsnv: item.Driver?.msnv || "",
         bienSo: item.Vehicle?.bienSo || "—",
+        checkInTime: item.checkInTime,
+        ...extra,
       });
     }
 
@@ -246,7 +248,6 @@ exports.getAlerts = async (req, res) => {
         );
       }
 
-      // Chưa Check In sau 07:30 (cảnh báo từ 07:31)
       const missingCheckIn = getMissingCheckInAlert(
         item.ngay,
         item.ca,
@@ -259,7 +260,8 @@ exports.getAlerts = async (req, res) => {
           item,
           "chuaCheckIn",
           "Chưa Check In",
-          `Quá giở vào ca ${missingCheckIn.shiftStartLabel} — đã ${missingCheckIn.minutes} phút`
+          `Quá giờ vào ca ${missingCheckIn.shiftStartLabel} — đã ${missingCheckIn.minutes} phút`,
+          { minutes: missingCheckIn.minutes }
         );
       }
 
@@ -274,7 +276,8 @@ exports.getAlerts = async (req, res) => {
           item,
           "late",
           "Trễ giờ Check In",
-          `Trễ ${checkInStatus.minutes} phút so với 7:30`
+          `Trễ ${checkInStatus.minutes} phút so với 7:30`,
+          { minutes: checkInStatus.minutes }
         );
       }
 
@@ -300,7 +303,6 @@ exports.getAlerts = async (req, res) => {
       );
     }
 
-    // Ưu tiên: chưa CI → chờ kho → quá hạn → trễ → GPS
     const typeOrder = {
       chuaCheckIn: 0,
       choXacNhan: 1,
@@ -308,6 +310,45 @@ exports.getAlerts = async (req, res) => {
       late: 3,
       gps: 4,
     };
+
+    const groupMap = new Map();
+    for (const item of items) {
+      const key = `${item.type}||${item.kho || ""}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          type: item.type,
+          kho: item.kho || "Không rõ kho",
+          label: item.label,
+          count: 0,
+          trips: [],
+        });
+      }
+      const group = groupMap.get(key);
+      group.count += 1;
+      group.trips.push({
+        id: item.id,
+        driverName: item.driverName,
+        bienSo: item.bienSo,
+        ca: item.ca,
+        ngay: item.ngay,
+        checkInTime: item.checkInTime,
+        minutes: item.minutes || 0,
+        detail: item.detail,
+      });
+    }
+
+    const groups = [...groupMap.values()]
+      .map((group) => {
+        if (group.type === "late" || group.type === "chuaCheckIn") {
+          group.trips.sort((a, b) => (b.minutes || 0) - (a.minutes || 0));
+        }
+        return group;
+      })
+      .sort(
+        (a, b) =>
+          (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9) ||
+          b.count - a.count
+      );
 
     items.sort(
       (a, b) => (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9)
@@ -332,6 +373,7 @@ exports.getAlerts = async (req, res) => {
       success: true,
       data: {
         counts,
+        groups,
         items: items.slice(0, 20),
         refreshedAt: new Date().toISOString(),
       },
