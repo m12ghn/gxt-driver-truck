@@ -31,6 +31,7 @@ import ShowChartIcon from "@mui/icons-material/ShowChart";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
 
 import StatCard from "../components/StatCard";
 import { getDashboardStats, getAlerts } from "../api/statsApi";
@@ -472,9 +473,31 @@ export default function Dashboard() {
                       justifyContent="space-between"
                       spacing={1}
                     >
-                      <Typography fontWeight={800} fontSize={14} noWrap>
-                        {shortKho(row.kho)}
-                      </Typography>
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1}
+                        minWidth={0}
+                      >
+                        <Box
+                          sx={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 1.5,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            bgcolor: alpha(brand.teal, 0.12),
+                            color: brand.teal,
+                            flexShrink: 0,
+                          }}
+                        >
+                          <WarehouseIcon sx={{ fontSize: 18 }} />
+                        </Box>
+                        <Typography fontWeight={800} fontSize={14} noWrap>
+                          {shortKho(row.kho)}
+                        </Typography>
+                      </Stack>
                       {detailTrips.length > 0 && (
                         <IconButton
                           size="small"
@@ -502,60 +525,85 @@ export default function Dashboard() {
                       {row.chuaCheckIn > 0 && (
                         <Chip
                           size="small"
+                          icon={<LoginIcon />}
                           label={`Chưa CI ${row.chuaCheckIn}`}
                           sx={{
-                            height: 22,
+                            height: 24,
                             fontWeight: 700,
                             bgcolor: alpha("#d32f2f", 0.12),
                             color: "#d32f2f",
+                            "& .MuiChip-icon": {
+                              color: "inherit",
+                              fontSize: 16,
+                            },
                           }}
                         />
                       )}
                       {row.late > 0 && (
                         <Chip
                           size="small"
+                          icon={<AccessTimeIcon />}
                           label={`Trễ ${row.late}`}
                           sx={{
-                            height: 22,
+                            height: 24,
                             fontWeight: 700,
                             bgcolor: alpha("#ef6c00", 0.12),
                             color: "#ef6c00",
+                            "& .MuiChip-icon": {
+                              color: "inherit",
+                              fontSize: 16,
+                            },
                           }}
                         />
                       )}
                       {row.choXacNhan > 0 && (
                         <Chip
                           size="small"
+                          icon={<HourglassEmptyIcon />}
                           label={`Chờ XN ${row.choXacNhan}`}
                           sx={{
-                            height: 22,
+                            height: 24,
                             fontWeight: 700,
                             bgcolor: alpha("#6a1b9a", 0.12),
                             color: "#6a1b9a",
+                            "& .MuiChip-icon": {
+                              color: "inherit",
+                              fontSize: 16,
+                            },
                           }}
                         />
                       )}
                       {row.gps > 0 && (
                         <Chip
                           size="small"
+                          icon={<GpsOffIcon />}
                           label={`GPS ${row.gps}`}
                           sx={{
-                            height: 22,
+                            height: 24,
                             fontWeight: 700,
                             bgcolor: alpha("#ad1457", 0.12),
                             color: "#ad1457",
+                            "& .MuiChip-icon": {
+                              color: "inherit",
+                              fontSize: 16,
+                            },
                           }}
                         />
                       )}
                       {row.chuaHoanThanh > 0 && (
                         <Chip
                           size="small"
+                          icon={<ReportProblemIcon />}
                           label={`Quá hạn ${row.chuaHoanThanh}`}
                           sx={{
-                            height: 22,
+                            height: 24,
                             fontWeight: 700,
                             bgcolor: alpha("#c62828", 0.12),
                             color: "#c62828",
+                            "& .MuiChip-icon": {
+                              color: "inherit",
+                              fontSize: 16,
+                            },
                           }}
                         />
                       )}
@@ -564,20 +612,34 @@ export default function Dashboard() {
                     {open && detailTrips.length > 0 && (
                       <Stack spacing={0.5} sx={{ mt: 1.25 }}>
                         {detailTrips.map((trip) => (
-                          <Typography
+                          <Stack
                             key={`${trip.kind}-${trip.id}`}
-                            variant="caption"
-                            sx={{ color: "text.secondary", lineHeight: 1.45 }}
+                            direction="row"
+                            spacing={0.75}
+                            alignItems="center"
                           >
-                            {trip.kind === "late" ? "Trễ" : "Chưa CI"} ·{" "}
-                            {trip.driverName} · {trip.bienSo}
-                            {trip.checkInTime
-                              ? ` · ${formatCheckInTime(trip.checkInTime)}`
-                              : ""}
-                            {trip.minutes
-                              ? ` · ${formatMinutes(trip.minutes)}`
-                              : ""}
-                          </Typography>
+                            {trip.kind === "late" ? (
+                              <AccessTimeIcon
+                                sx={{ fontSize: 14, color: "#ef6c00" }}
+                              />
+                            ) : (
+                              <LoginIcon
+                                sx={{ fontSize: 14, color: "#d32f2f" }}
+                              />
+                            )}
+                            <Typography
+                              variant="caption"
+                              sx={{ color: "text.secondary", lineHeight: 1.45 }}
+                            >
+                              {trip.driverName} · {trip.bienSo}
+                              {trip.checkInTime
+                                ? ` · ${formatCheckInTime(trip.checkInTime)}`
+                                : ""}
+                              {trip.minutes
+                                ? ` · ${formatMinutes(trip.minutes)}`
+                                : ""}
+                            </Typography>
+                          </Stack>
                         ))}
                       </Stack>
                     )}
