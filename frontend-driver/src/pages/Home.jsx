@@ -27,6 +27,9 @@ export default function Home() {
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [notFoundMessage, setNotFoundMessage] = useState(
+    "Hôm nay chưa có phân công."
+  );
   const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
@@ -37,7 +40,9 @@ export default function Home() {
 
     setLoading(true);
     setNotFound(false);
+    setNotFoundMessage("Hôm nay chưa có phân công.");
     setConnectionError(false);
+    setAssignment(null);
 
     try {
 
@@ -51,6 +56,9 @@ export default function Home() {
 
       if (err.response?.status === 404) {
         setNotFound(true);
+        setNotFoundMessage(
+          err.response?.data?.message || "Hôm nay chưa có phân công."
+        );
       } else if (!err.response) {
         setConnectionError(true);
       }
@@ -162,7 +170,7 @@ export default function Home() {
       {!loading && !connectionError && notFound && (
         <Paper sx={{ p: 3, borderRadius: 3, textAlign: "center" }}>
           <Typography color="text.secondary">
-            Hôm nay chưa có phân công.
+            {notFoundMessage}
           </Typography>
         </Paper>
       )}

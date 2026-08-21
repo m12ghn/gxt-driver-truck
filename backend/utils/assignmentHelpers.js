@@ -10,9 +10,53 @@ function vietnamToday() {
   });
 }
 
+function addDays(isoDate, n) {
+  const [year, month, day] = String(isoDate)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  if (!year || !month || !day) return isoDate;
+  const date = new Date(Date.UTC(year, month - 1, day + n));
+  return date.toISOString().slice(0, 10);
+}
+
+function assignmentDateText(value) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+  }
+  const text = String(value).trim();
+  const iso = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  return parseNgay(text);
+}
+
+function parseNgay(value) {
+  const raw = String(value ?? "")
+    .replace(/\u00a0/g, " ")
+    .trim();
+  if (!raw || raw === "undefined" || raw === "null") return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+  const slash = raw.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+  if (slash) {
+    let [, dd, mm, yyyy] = slash;
+    if (yyyy.length === 2) {
+      yyyy = Number(yyyy) > 50 ? `19${yyyy}` : `20${yyyy}`;
+    }
+    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  }
+
+  return raw;
+}
+
 function assignmentDays() {
+  const today = vietnamToday();
   const utcToday = new Date().toISOString().split("T")[0];
-  return [...new Set([vietnamToday(), utcToday])];
+  return [...new Set([today, utcToday, addDays(today, -1), addDays(today, 1)])];
 }
 
 function normalizeMsnv(value) {
@@ -20,6 +64,15 @@ function normalizeMsnv(value) {
     .replace(/\u00a0/g, " ")
     .trim()
     .replace(/\.0+$/, "");
+}
+
+function driverMatchesMsnv(driver, msnv) {
+  const trimmed = normalizeMsnv(msnv);
+  const theirs = normalizeMsnv(driver?.msnv);
+  if (!trimmed || !theirs) return false;
+  if (theirs === trimmed) return true;
+  const digits = trimmed.replace(/\D/g, "");
+  return Boolean(digits) && theirs.replace(/\D/g, "") === digits;
 }
 
 async function findDriversByMsnv(msnv) {
@@ -47,9 +100,17 @@ async function findDriversByMsnv(msnv) {
     );
   }
 
-  return Driver.findAll({
-    where: { [Op.or]: or },
-  });
+  try {
+    const rows = await Driver.findAll({
+      where: { [Op.or]: or },
+    });
+    if (rows.length) return rows;
+  } catch (err) {
+    console.error("findDriversByMsnv:", err.message);
+  }
+
+  const all = await Driver.findAll();
+  return all.filter((driver) => driverMatchesMsnv(driver, trimmed));
 }
 
 // ==============================
@@ -147,8 +208,12 @@ async function findUnfinishedAssignment({
 
 module.exports = {
   vietnamToday,
+  addDays,
+  assignmentDateText,
+  parseNgay,
   assignmentDays,
   normalizeMsnv,
+  driverMatchesMsnv,
   findDriversByMsnv,
   markOverdueAssignments,
   findUnfinishedAssignment,

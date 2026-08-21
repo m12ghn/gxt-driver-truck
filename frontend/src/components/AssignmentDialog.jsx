@@ -25,9 +25,12 @@ export default function AssignmentDialog({
   const [drivers, setDrivers] = useState([]);
   const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
 
-  const [ngay, setNgay] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const vietnamToday = () =>
+    new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+
+  const [ngay, setNgay] = useState(vietnamToday());
   const [ca, setCa] = useState("");
   const [kho, setKho] = useState("");
   const [vehicleId, setVehicleId] = useState("");
@@ -35,6 +38,7 @@ export default function AssignmentDialog({
 
   useEffect(() => {
     if (open) {
+      setNgay(vietnamToday());
       loadVehicles();
       loadDrivers();
       loadWarehouses();
@@ -112,7 +116,7 @@ export default function AssignmentDialog({
   }
 
   function handleClose() {
-    setNgay(new Date().toISOString().split("T")[0]);
+    setNgay(vietnamToday());
     setCa("");
     setKho("");
     setVehicleId("");

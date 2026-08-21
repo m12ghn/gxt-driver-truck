@@ -11,6 +11,7 @@ const {
   markOverdueAssignments,
   findDriversByMsnv,
   normalizeMsnv,
+  parseNgay,
 } = require("../utils/assignmentHelpers");
 const {
   uploadBufferToSupabase,
@@ -70,12 +71,11 @@ exports.importExcel = async (req, res) => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      let ngay = String(row["Ngày"]).trim();
+      const ngay = parseNgay(cell(row, "Ngày", "Ngay", "Date"));
 
-      if (ngay.includes("/")) {
-        const [dd, mm, yyyy] = ngay.split("/");
-
-        ngay = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+      if (!ngay) {
+        errors.push(`Dòng ${i + 2}: Ngày không hợp lệ.`);
+        continue;
       }
 
       const bienSo = String(cell(row, "Biển số", "Bien so") || "").trim();

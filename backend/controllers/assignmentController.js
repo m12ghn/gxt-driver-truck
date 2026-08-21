@@ -9,6 +9,8 @@ const IncidentReport = require("../models/IncidentReport");
 const {
   vietnamToday,
   assignmentDays,
+  assignmentDateText,
+  parseNgay,
   findDriversByMsnv,
   markOverdueAssignments,
   findUnfinishedAssignment,
@@ -47,6 +49,7 @@ exports.getTodayAssignment = async (req, res) => {
     await markOverdueAssignments();
 
     const { msnv } = req.params;
+    const today = vietnamToday();
     const days = assignmentDays();
 
     const drivers = await findDriversByMsnv(msnv);
@@ -58,10 +61,12 @@ exports.getTodayAssignment = async (req, res) => {
       });
     }
 
-    const assignment = await Assignment.findOne({
+    const driverIds = drivers.map((item) => item.id);
+
+    const rows = await Assignment.findAll({
       where: {
         ngay: { [Op.in]: days },
-        driverId: { [Op.in]: drivers.map((item) => item.id) },
+        driverId: { [Op.in]: driverIds },
       },
       include: [
         Vehicle,
@@ -73,6 +78,35 @@ exports.getTodayAssignment = async (req, res) => {
         ["ca", "ASC"],
       ],
     });
+
+    const dateOf = (item) => assignmentDateText(item.ngay);
+    const utcToday = new Date().toISOString().split("T")[0];
+
+    let assignment =
+      rows.find((item) => dateOf(item) === today) ||
+      rows.find((item) => dateOf(item) === utcToday) ||
+      rows.find((item) =>
+        ["Đã Check In", "Chưa hoàn thành"].includes(item.trangThai)
+      ) ||
+      null;
+
+    if (!assignment) {
+      assignment = await Assignment.findOne({
+        where: {
+          driverId: { [Op.in]: driverIds },
+          trangThai: { [Op.in]: ["Đã Check In", "Chưa hoàn thành"] },
+        },
+        include: [
+          Vehicle,
+          Driver,
+          { model: IncidentReport, as: "incidents" },
+        ],
+        order: [
+          ["ngay", "DESC"],
+          ["ca", "ASC"],
+        ],
+      });
+    }
 
     if (!assignment) {
       return res.status(404).json({
@@ -296,6 +330,15 @@ exports.createAssignment = async (req, res) => {
       vehicleId,
       driverId,
     } = req.body;
+
+    ngay = parseNgay(ngay);
+
+    if (!ngay || !ca || !kho || !vehicleId || !driverId) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu ngày, ca, kho, xe hoặc tài xế.",
+      });
+    }
 
     if (req.user?.quyen === "WAREHOUSE") {
       if (!req.user.kho) {
