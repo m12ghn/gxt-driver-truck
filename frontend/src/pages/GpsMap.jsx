@@ -35,16 +35,25 @@ import {
   TRUCK_SVG,
 } from "../utils/mapIcons";
 
+function isValidLatLng(lat, lng) {
+  const la = Number(lat);
+  const ln = Number(lng);
+  return Number.isFinite(la) && Number.isFinite(ln);
+}
+
 function FitAll({ points }) {
   const map = useMap();
 
   useEffect(() => {
-    if (!points.length) return;
-    if (points.length === 1) {
-      map.setView(points[0], 15);
+    const valid = (points || []).filter(
+      (p) => Array.isArray(p) && isValidLatLng(p[0], p[1])
+    );
+    if (!valid.length) return;
+    if (valid.length === 1) {
+      map.setView(valid[0], 15);
       return;
     }
-    map.fitBounds(points, { padding: [40, 40], maxZoom: 15 });
+    map.fitBounds(valid, { padding: [40, 40], maxZoom: 15 });
   }, [map, points]);
 
   return null;
@@ -84,10 +93,10 @@ export default function GpsMap() {
   }
 
   const activeWarehouses = useMemo(() => {
-    if (khoFilter) {
-      return warehouses.filter((w) => khoMatches(w.ten, khoFilter));
-    }
-    return warehouses;
+    const list = khoFilter
+      ? warehouses.filter((w) => khoMatches(w.ten, khoFilter))
+      : warehouses;
+    return list.filter((w) => isValidLatLng(w.latitude, w.longitude));
   }, [warehouses, khoFilter]);
 
   const pins = useMemo(() => {
@@ -95,22 +104,22 @@ export default function GpsMap() {
       .filter((a) => khoMatches(a.kho, khoFilter))
       .flatMap((a) => {
         const list = [];
-        if (a.checkInLatitude != null && a.checkInLongitude != null) {
+        if (isValidLatLng(a.checkInLatitude, a.checkInLongitude)) {
           list.push({
             key: `in-${a.id}`,
             type: "in",
-            lat: a.checkInLatitude,
-            lng: a.checkInLongitude,
+            lat: Number(a.checkInLatitude),
+            lng: Number(a.checkInLongitude),
             valid: a.checkInGpsValid,
             assignment: a,
           });
         }
-        if (a.checkOutLatitude != null && a.checkOutLongitude != null) {
+        if (isValidLatLng(a.checkOutLatitude, a.checkOutLongitude)) {
           list.push({
             key: `out-${a.id}`,
             type: "out",
-            lat: a.checkOutLatitude,
-            lng: a.checkOutLongitude,
+            lat: Number(a.checkOutLatitude),
+            lng: Number(a.checkOutLongitude),
             valid: a.checkOutGpsValid,
             assignment: a,
           });
@@ -122,9 +131,7 @@ export default function GpsMap() {
   const mapPoints = useMemo(() => {
     const pts = [];
     activeWarehouses.forEach((w) => {
-      if (w.latitude != null && w.longitude != null) {
-        pts.push([w.latitude, w.longitude]);
-      }
+      pts.push([Number(w.latitude), Number(w.longitude)]);
     });
     pins.forEach((p) => pts.push([p.lat, p.lng]));
     return pts;

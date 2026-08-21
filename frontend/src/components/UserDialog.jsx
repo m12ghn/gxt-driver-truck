@@ -13,6 +13,10 @@ import {
   ListItemText,
   Chip,
   Box,
+  FormControl,
+  InputLabel,
+  Select,
+  FormHelperText,
 } from "@mui/material";
 
 import {
@@ -55,22 +59,23 @@ export default function UserDialog({
       setHoTen(user.hoTen);
       setSoDienThoai(user.soDienThoai);
       setQuyen(user.quyen);
-      setKhoList(user.khoList?.length ? user.khoList : parseKhoList(user.kho));
+      setKhoList(parseKhoList(user.khoList?.length ? user.khoList : user.kho));
     } else {
       resetForm();
     }
   }, [open, user]);
 
   useEffect(() => {
-    if (!khoList.length || !khoOptions.length) return;
-    const mapped = khoList.map((name) => {
+    const current = parseKhoList(khoList);
+    if (!current.length || !khoOptions.length) return;
+    const mapped = current.map((name) => {
       const short = shortKhoName(name);
       return (
         khoOptions.find((item) => item === name || shortKhoName(item) === short) ||
         name
       );
     });
-    if (mapped.some((name, index) => name !== khoList[index])) {
+    if (mapped.some((name, index) => name !== current[index])) {
       setKhoList(mapped);
     }
   }, [khoOptions, khoList]);
@@ -179,17 +184,22 @@ export default function UserDialog({
 
           {quyen === "WAREHOUSE" && (
             <Grid size={{ xs: 12 }}>
-              <TextField
-                select
-                fullWidth
-                label="Kho phụ trách"
-                value={khoList}
-                helperText="Có thể chọn nhiều kho nếu quản lý hơn 1 kho"
-                SelectProps={{
-                  multiple: true,
-                  renderValue: (selected) => (
+              <FormControl fullWidth>
+                <InputLabel id="user-kho-label">Kho phụ trách</InputLabel>
+                <Select
+                  labelId="user-kho-label"
+                  multiple
+                  label="Kho phụ trách"
+                  value={Array.isArray(khoList) ? khoList : []}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setKhoList(
+                      Array.isArray(next) ? next : parseKhoList(next)
+                    );
+                  }}
+                  renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {selected.map((value) => (
+                      {parseKhoList(selected).map((value) => (
                         <Chip
                           key={value}
                           size="small"
@@ -197,20 +207,24 @@ export default function UserDialog({
                         />
                       ))}
                     </Box>
-                  ),
-                }}
-                onChange={(e) => setKhoList(e.target.value)}
-              >
-                {khoOptions.map((item) => (
-                  <MenuItem key={item} value={item}>
-                    <Checkbox checked={khoList.includes(item)} />
-                    <ListItemText
-                      primary={shortKhoName(item)}
-                      secondary={item}
-                    />
-                  </MenuItem>
-                ))}
-              </TextField>
+                  )}
+                >
+                  {khoOptions.map((item) => (
+                    <MenuItem key={item} value={item}>
+                      <Checkbox
+                        checked={parseKhoList(khoList).includes(item)}
+                      />
+                      <ListItemText
+                        primary={shortKhoName(item)}
+                        secondary={item}
+                      />
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  Có thể chọn nhiều kho nếu quản lý hơn 1 kho
+                </FormHelperText>
+              </FormControl>
             </Grid>
           )}
         </Grid>
