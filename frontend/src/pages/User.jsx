@@ -14,6 +14,7 @@ import {
 import UserDialog from "../components/UserDialog";
 import UserTable from "../components/UserTable";
 import UserToolbar from "../components/UserToolbar";
+import { formatKhoLabel } from "../constants/warehouses";
 
 export default function User() {
 
@@ -90,7 +91,8 @@ export default function User() {
     return users.filter((u) =>
       u.msnv?.toLowerCase().includes(key) ||
       u.hoTen?.toLowerCase().includes(key) ||
-      u.soDienThoai?.toLowerCase().includes(key)
+      u.soDienThoai?.toLowerCase().includes(key) ||
+      formatKhoLabel(u.khoList || u.kho).toLowerCase().includes(key)
     );
 
   }, [users, keyword]);

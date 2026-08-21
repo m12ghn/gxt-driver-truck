@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/database");
+const { parseKhoList } = require("../utils/scopeHelpers");
 
 const User = sequelize.define("User", {
   msnv: {
@@ -29,10 +30,17 @@ const User = sequelize.define("User", {
     allowNull: false,
   },
 
-  // Kho phụ trách — bắt buộc với WAREHOUSE, dùng để scope dữ liệu
+  // Kho phụ trách — bắt buộc với WAREHOUSE, có thể nhiều kho (JSON array)
   kho: {
-    type: DataTypes.STRING,
+    type: DataTypes.TEXT,
     allowNull: true,
+  },
+
+  khoList: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return parseKhoList(this.getDataValue("kho"));
+    },
   },
 
   trangThai: {

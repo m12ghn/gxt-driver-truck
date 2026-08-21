@@ -1,5 +1,7 @@
+const { Op } = require("sequelize");
 const Warehouse = require("../models/Warehouse");
 const { ensureWarehouses } = require("../utils/ensureWarehouses");
+const { getUserKhoVariants, userKhoValue } = require("../utils/scopeHelpers");
 
 exports.getWarehouses = async (req, res) => {
   try {
@@ -7,8 +9,9 @@ exports.getWarehouses = async (req, res) => {
 
     const where = {};
 
-    if (req.user?.quyen === "WAREHOUSE" && req.user.kho) {
-      where.ten = req.user.kho;
+    if (req.user?.quyen === "WAREHOUSE") {
+      const variants = getUserKhoVariants(userKhoValue(req.user));
+      where.ten = variants.length ? { [Op.in]: variants } : "__NO_KHO__";
     }
 
     const warehouses = await Warehouse.findAll({

@@ -61,7 +61,10 @@ export default function AssignmentDialog({
     try {
       const res = await getWarehouses();
       const list = officialWarehouseNames(res.data?.data || []);
-      if (list.length) setKhoOptions(list);
+      if (list.length) {
+        setKhoOptions(list);
+        setKho((prev) => prev || (list.length === 1 ? list[0] : ""));
+      }
     } catch (err) {
       console.error(err);
     }

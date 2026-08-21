@@ -1,4 +1,10 @@
 const User = require("../models/User");
+const { parseKhoList, serializeKhoList } = require("../utils/scopeHelpers");
+
+function resolveWarehouseKho(quyen, kho) {
+  if (quyen !== "WAREHOUSE") return null;
+  return serializeKhoList(kho);
+}
 
 // ==========================
 // DANH SÁCH USER
@@ -43,10 +49,10 @@ exports.create = async (req, res) => {
       });
     }
 
-    if (quyen === "WAREHOUSE" && !kho) {
+    if (quyen === "WAREHOUSE" && !parseKhoList(kho).length) {
       return res.status(400).json({
         success: false,
-        message: "Vui lòng chọn kho phụ trách cho tài khoản WAREHOUSE.",
+        message: "Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.",
       });
     }
 
@@ -83,7 +89,7 @@ exports.create = async (req, res) => {
       matKhau: msnv,
 
       quyen,
-      kho: quyen === "WAREHOUSE" ? kho : null,
+      kho: resolveWarehouseKho(quyen, kho),
 
       trangThai: "Hoạt động",
     });
@@ -135,10 +141,10 @@ exports.update = async (req, res) => {
       });
     }
 
-    if (quyen === "WAREHOUSE" && !kho) {
+    if (quyen === "WAREHOUSE" && !parseKhoList(kho).length) {
       return res.status(400).json({
         success: false,
-        message: "Vui lòng chọn kho phụ trách cho tài khoản WAREHOUSE.",
+        message: "Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.",
       });
     }
 
@@ -175,7 +181,7 @@ exports.update = async (req, res) => {
       matKhau: msnv,
 
       quyen,
-      kho: quyen === "WAREHOUSE" ? kho : null,
+      kho: resolveWarehouseKho(quyen, kho),
       trangThai,
     });
 

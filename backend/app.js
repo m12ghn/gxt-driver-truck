@@ -6,6 +6,7 @@ const cors = require("cors");
 const sequelize = require("./database/database");
 const { ensureWarehouses } = require("./utils/ensureWarehouses");
 const { ensureAssignmentColumns } = require("./utils/ensureAssignmentColumns");
+const { ensureUserKhoColumn } = require("./utils/ensureUserKhoColumn");
 
 // ==============================
 // Models
@@ -93,6 +94,7 @@ function kickWarmup() {
     .then(() => ensureConnected())
     .then(() => ensureWarehouses())
     .then(() => ensureAssignmentColumns())
+    .then(() => ensureUserKhoColumn())
     .catch((err) => {
       warmupStarted = false;
       console.error("⚠️  Warmup failed:", err.message);

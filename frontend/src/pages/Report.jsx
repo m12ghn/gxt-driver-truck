@@ -35,7 +35,12 @@ import WarehouseIcon from "@mui/icons-material/Warehouse";
 import StatCard from "../components/StatCard";
 import { getReportStats, exportReportExcel } from "../api/statsApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
+import {
+  warehouses as fallbackWarehouses,
+  officialWarehouseNames,
+  parseKhoList,
+  shortKhoName,
+} from "../constants/warehouses";
 import { brand } from "../theme/brand";
 
 function SectionHeading({ icon, children, hint }) {
@@ -100,11 +105,16 @@ function RateCell({ value, color = brand.teal }) {
 export default function Report() {
   const today = new Date().toISOString().split("T")[0];
   const firstOfMonth = today.slice(0, 8) + "01";
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isWarehouse = user?.quyen === "WAREHOUSE";
+  const userKhoList = parseKhoList(user?.khoList || user?.kho);
 
   const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(today);
   const [kho, setKho] = useState("");
-  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
+  const [khoOptions, setKhoOptions] = useState(
+    isWarehouse && userKhoList.length ? userKhoList : fallbackWarehouses
+  );
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -264,7 +274,7 @@ export default function Report() {
 
             <Typography sx={{ opacity: 0.85, mt: 0.5 }}>
               Khoảng thời gian: {rangeLabel}
-              {kho ? ` · Kho ${kho}` : " · Tất cả kho"}
+              {kho ? ` · Kho ${shortKhoName(kho)}` : isWarehouse ? " · Tất cả kho phụ trách" : " · Tất cả kho"}
             </Typography>
           </Box>
 
@@ -348,10 +358,12 @@ export default function Report() {
             onChange={(e) => setKho(e.target.value)}
             sx={{ minWidth: 200 }}
           >
-            <MenuItem value="">Tất cả kho</MenuItem>
+            <MenuItem value="">
+              {isWarehouse ? "Tất cả kho phụ trách" : "Tất cả kho"}
+            </MenuItem>
             {khoOptions.map((item) => (
               <MenuItem key={item} value={item}>
-                {item}
+                {shortKhoName(item)}
               </MenuItem>
             ))}
           </TextField>

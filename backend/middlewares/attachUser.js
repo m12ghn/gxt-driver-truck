@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { parseKhoList } = require("../utils/scopeHelpers");
 
 // Gắn req.user từ header (FE gửi sau khi login).
 // SUPER_ADMIN không nằm trong bảng Users — nhận qua x-user-quyen.
@@ -14,6 +15,7 @@ async function attachUser(req, res, next) {
         hoTen: "Super Admin",
         quyen: "SUPER_ADMIN",
         kho: null,
+        khoList: [],
       };
       return next();
     }
@@ -30,12 +32,16 @@ async function attachUser(req, res, next) {
       return next();
     }
 
+    const khoList = parseKhoList(user.kho);
+    const headerKho = parseKhoList(req.headers["x-user-kho"]);
+
     req.user = {
       id: user.id,
       msnv: user.msnv,
       hoTen: user.hoTen,
       quyen: user.quyen,
-      kho: user.kho || null,
+      kho: user.kho || (headerKho.length ? headerKho : null),
+      khoList: khoList.length ? khoList : headerKho,
     };
 
     next();

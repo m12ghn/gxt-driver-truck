@@ -9,6 +9,10 @@ import {
   Grid,
   MenuItem,
   TextField,
+  Checkbox,
+  ListItemText,
+  Chip,
+  Box,
 } from "@mui/material";
 
 import {
@@ -16,7 +20,12 @@ import {
   updateUser,
 } from "../api/userApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
+import {
+  warehouses as fallbackWarehouses,
+  officialWarehouseNames,
+  parseKhoList,
+  shortKhoName,
+} from "../constants/warehouses";
 
 export default function UserDialog({
   open,
@@ -28,7 +37,7 @@ export default function UserDialog({
   const [hoTen, setHoTen] = useState("");
   const [soDienThoai, setSoDienThoai] = useState("");
   const [quyen, setQuyen] = useState("");
-  const [kho, setKho] = useState("");
+  const [khoList, setKhoList] = useState([]);
   const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
 
   useEffect(() => {
@@ -46,18 +55,32 @@ export default function UserDialog({
       setHoTen(user.hoTen);
       setSoDienThoai(user.soDienThoai);
       setQuyen(user.quyen);
-      setKho(user.kho || "");
+      setKhoList(user.khoList?.length ? user.khoList : parseKhoList(user.kho));
     } else {
       resetForm();
     }
   }, [open, user]);
+
+  useEffect(() => {
+    if (!khoList.length || !khoOptions.length) return;
+    const mapped = khoList.map((name) => {
+      const short = shortKhoName(name);
+      return (
+        khoOptions.find((item) => item === name || shortKhoName(item) === short) ||
+        name
+      );
+    });
+    if (mapped.some((name, index) => name !== khoList[index])) {
+      setKhoList(mapped);
+    }
+  }, [khoOptions, khoList]);
 
   function resetForm() {
     setMsnv("");
     setHoTen("");
     setSoDienThoai("");
     setQuyen("");
-    setKho("");
+    setKhoList([]);
   }
 
   async function handleSave() {
@@ -66,8 +89,8 @@ export default function UserDialog({
       return;
     }
 
-    if (quyen === "WAREHOUSE" && !kho) {
-      alert("Vui lòng chọn kho phụ trách cho tài khoản WAREHOUSE.");
+    if (quyen === "WAREHOUSE" && !khoList.length) {
+      alert("Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.");
       return;
     }
 
@@ -77,7 +100,7 @@ export default function UserDialog({
         hoTen,
         soDienThoai,
         quyen,
-        kho: quyen === "WAREHOUSE" ? kho : null,
+        kho: quyen === "WAREHOUSE" ? khoList : null,
       };
 
       if (user) {
@@ -146,7 +169,7 @@ export default function UserDialog({
               value={quyen}
               onChange={(e) => {
                 setQuyen(e.target.value);
-                if (e.target.value !== "WAREHOUSE") setKho("");
+                if (e.target.value !== "WAREHOUSE") setKhoList([]);
               }}
             >
               <MenuItem value="ADMIN">ADMIN</MenuItem>
@@ -160,12 +183,31 @@ export default function UserDialog({
                 select
                 fullWidth
                 label="Kho phụ trách"
-                value={kho}
-                onChange={(e) => setKho(e.target.value)}
+                value={khoList}
+                helperText="Có thể chọn nhiều kho nếu quản lý hơn 1 kho"
+                SelectProps={{
+                  multiple: true,
+                  renderValue: (selected) => (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {selected.map((value) => (
+                        <Chip
+                          key={value}
+                          size="small"
+                          label={shortKhoName(value)}
+                        />
+                      ))}
+                    </Box>
+                  ),
+                }}
+                onChange={(e) => setKhoList(e.target.value)}
               >
                 {khoOptions.map((item) => (
                   <MenuItem key={item} value={item}>
-                    {item}
+                    <Checkbox checked={khoList.includes(item)} />
+                    <ListItemText
+                      primary={shortKhoName(item)}
+                      secondary={item}
+                    />
                   </MenuItem>
                 ))}
               </TextField>

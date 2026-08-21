@@ -30,6 +30,14 @@ import {
   deleteAssignment,
   exportAssignmentExcel,
 } from "../api/assignmentApi";
+import { getWarehouses } from "../api/warehouseApi";
+import {
+  formatKhoLabel,
+  parseKhoList,
+  shortKhoName,
+  khoMatches,
+  officialWarehouseNames,
+} from "../constants/warehouses";
 
 export default function Assignment() {
 
@@ -43,6 +51,8 @@ export default function Assignment() {
 
   const isWarehouse =
     user?.quyen === "WAREHOUSE";
+
+  const userKhoList = parseKhoList(user?.khoList || user?.kho);
 
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
@@ -100,14 +110,18 @@ export default function Assignment() {
   const [warehouseFilter, setWarehouseFilter] =
     useState("");
 
-  const [khoFilter, setKhoFilter] =
-    useState(isWarehouse ? (user?.kho || "") : "");
+  const [khoFilter, setKhoFilter] = useState("");
+  const [managedKhoList, setManagedKhoList] = useState(userKhoList);
 
   useEffect(() => {
-    if (isWarehouse && user?.kho) {
-      setKhoFilter(user.kho);
-    }
-  }, [isWarehouse, user?.kho]);
+    if (!isWarehouse) return;
+    getWarehouses()
+      .then((res) => {
+        const list = officialWarehouseNames(res.data?.data || []);
+        if (list.length) setManagedKhoList(list);
+      })
+      .catch(() => {});
+  }, [isWarehouse]);
 
   useEffect(() => {
 
@@ -307,9 +321,7 @@ export default function Assignment() {
       warehouseFilter === "" ||
       item.warehouseStatus === warehouseFilter;
 
-    const matchKho =
-      khoFilter === "" ||
-      item.kho === khoFilter;
+    const matchKho = khoMatches(item.kho, khoFilter);
 
     return (
       matchSearch &&
@@ -428,13 +440,13 @@ export default function Assignment() {
             sx={{ width: 250 }}
           />
 
-          {isWarehouse ? (
+          {isWarehouse && managedKhoList.length <= 1 ? (
             <TextField
               size="small"
               label="Kho"
-              value={user?.kho || "Chưa gán kho"}
+              value={formatKhoLabel(managedKhoList) || "Chưa gán kho"}
               InputProps={{ readOnly: true }}
-              sx={{ width: 160 }}
+              sx={{ width: 180 }}
             />
           ) : (
             <TextField
@@ -445,15 +457,15 @@ export default function Assignment() {
               onChange={(e) =>
                 setKhoFilter(e.target.value)
               }
-              sx={{ width: 160 }}
+              sx={{ width: 180 }}
             >
               <MenuItem value="">
                 Tất cả
               </MenuItem>
 
-              {khoOptions.map((kho) => (
+              {(isWarehouse ? managedKhoList : khoOptions).map((kho) => (
                 <MenuItem key={kho} value={kho}>
-                  {kho}
+                  {shortKhoName(kho)}
                 </MenuItem>
               ))}
             </TextField>

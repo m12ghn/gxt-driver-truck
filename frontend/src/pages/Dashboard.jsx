@@ -36,6 +36,7 @@ import WarehouseIcon from "@mui/icons-material/Warehouse";
 import StatCard from "../components/StatCard";
 import { getDashboardStats, getAlerts } from "../api/statsApi";
 import { brand } from "../theme/brand";
+import { formatKhoLabel } from "../constants/warehouses";
 
 const REFRESH_MS = 45000;
 
@@ -333,8 +334,9 @@ export default function Dashboard() {
 
             <Typography sx={{ opacity: 0.85, mt: 0.5 }}>
               Tổng quan hoạt động
-              {user?.quyen === "WAREHOUSE" && (stats.kho || user?.kho)
-                ? ` ${stats.kho || user.kho}`
+              {user?.quyen === "WAREHOUSE" &&
+              formatKhoLabel(stats.khoList || stats.kho || user?.khoList || user?.kho)
+                ? ` ${formatKhoLabel(stats.khoList || stats.kho || user?.khoList || user?.kho)}`
                 : ""}{" "}
               ngày{" "}
               {new Date().toLocaleDateString("vi-VN", {

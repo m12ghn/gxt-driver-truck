@@ -19,6 +19,7 @@ const {
   createSignedUploads,
 } = require("../utils/uploadToSupabase");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
+const { assertWarehouseAccess } = require("../utils/scopeHelpers");
 
 function cell(row, ...names) {
   const keys = Object.keys(row || {});
@@ -82,6 +83,13 @@ exports.importExcel = async (req, res) => {
       const msnv = normalizeMsnv(cell(row, "MSNV", "Msnv"));
       const ca = String(cell(row, "Ca") || "").trim();
       const kho = normalizeKhoName(cell(row, "Kho"));
+
+      try {
+        assertWarehouseAccess(req, kho);
+      } catch (scopeErr) {
+        errors.push(`Dòng ${i + 2}: ${scopeErr.message}`);
+        continue;
+      }
 
       const vehicle = await Vehicle.findOne({
         where: {

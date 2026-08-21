@@ -19,6 +19,7 @@ const {
 const {
   applyWarehouseScope,
   assertWarehouseAccess,
+  assertWarehouseKhoChoice,
 } = require("../utils/scopeHelpers");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
@@ -340,17 +341,18 @@ exports.createAssignment = async (req, res) => {
       });
     }
 
-    if (req.user?.quyen === "WAREHOUSE") {
-      if (!req.user.kho) {
-        return res.status(403).json({
-          success: false,
-          message: "Tài khoản kho chưa được gán kho phụ trách.",
-        });
+    try {
+      if (req.user?.quyen === "WAREHOUSE") {
+        kho = assertWarehouseKhoChoice(req, kho);
+      } else {
+        kho = normalizeKhoName(kho);
       }
-      kho = req.user.kho;
+    } catch (scopeErr) {
+      return res.status(scopeErr.status || 403).json({
+        success: false,
+        message: scopeErr.message,
+      });
     }
-
-    kho = normalizeKhoName(kho);
 
     // ==============================
     // Chặn trùng xe
@@ -788,9 +790,15 @@ exports.updateAssignment = async (req, res) => {
     const vehicleId = req.body.vehicleId || assignment.vehicleId;
     const driverId = req.body.driverId || assignment.driverId;
 
-    // WAREHOUSE không được đổi sang kho khác
     if (req.user?.quyen === "WAREHOUSE" && req.body.kho) {
-      req.body.kho = req.user.kho;
+      try {
+        req.body.kho = assertWarehouseKhoChoice(req, req.body.kho);
+      } catch (scopeErr) {
+        return res.status(scopeErr.status || 403).json({
+          success: false,
+          message: scopeErr.message,
+        });
+      }
     }
 
     // ==============================

@@ -25,7 +25,7 @@ import "../utils/mapIcons.css";
 
 import { getAssignments } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { officialWarehouseNames } from "../constants/warehouses";
+import { officialWarehouseNames, formatKhoLabel, shortKhoName, khoMatches } from "../constants/warehouses";
 import { brand } from "../theme/brand";
 import {
   warehouseIcon,
@@ -59,7 +59,7 @@ export default function GpsMap() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [khoFilter, setKhoFilter] = useState(user?.kho || "");
+  const [khoFilter, setKhoFilter] = useState("");
 
   useEffect(() => {
     loadData();
@@ -84,18 +84,15 @@ export default function GpsMap() {
   }
 
   const activeWarehouses = useMemo(() => {
-    if (isWarehouse && user?.kho) {
-      return warehouses.filter((w) => w.ten === user.kho);
-    }
     if (khoFilter) {
-      return warehouses.filter((w) => w.ten === khoFilter);
+      return warehouses.filter((w) => khoMatches(w.ten, khoFilter));
     }
     return warehouses;
-  }, [warehouses, khoFilter, isWarehouse, user?.kho]);
+  }, [warehouses, khoFilter]);
 
   const pins = useMemo(() => {
     return assignments
-      .filter((a) => !khoFilter || a.kho === khoFilter)
+      .filter((a) => khoMatches(a.kho, khoFilter))
       .flatMap((a) => {
         const list = [];
         if (a.checkInLatitude != null && a.checkInLongitude != null) {
@@ -166,11 +163,13 @@ export default function GpsMap() {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Pin Check In/Out hôm nay so với bán kính kho
-              {isWarehouse && user?.kho ? ` · Kho ${user.kho}` : ""}
+              {isWarehouse && warehouses.length
+                ? ` · ${formatKhoLabel(warehouses.map((w) => w.ten))}`
+                : ""}
             </Typography>
           </Box>
 
-          {!isWarehouse && (
+          {warehouses.length > 1 && (
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>Kho</InputLabel>
               <Select
@@ -178,10 +177,12 @@ export default function GpsMap() {
                 value={khoFilter}
                 onChange={(e) => setKhoFilter(e.target.value)}
               >
-                <MenuItem value="">Tất cả kho</MenuItem>
+                <MenuItem value="">
+                  {isWarehouse ? "Tất cả kho phụ trách" : "Tất cả kho"}
+                </MenuItem>
                 {warehouses.map((w) => (
                   <MenuItem key={w.ten} value={w.ten}>
-                    {w.ten}
+                    {shortKhoName(w.ten)}
                   </MenuItem>
                 ))}
               </Select>

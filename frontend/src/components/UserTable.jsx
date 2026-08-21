@@ -9,6 +9,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 
 import { DataGrid } from "@mui/x-data-grid";
+import { formatKhoLabel, parseKhoList, shortKhoName } from "../constants/warehouses";
 
 export default function UserTable({
   users,
@@ -35,9 +36,31 @@ export default function UserTable({
     {
       field: "kho",
       headerName: "Kho phụ trách",
-      width: 140,
+      flex: 1.2,
+      minWidth: 200,
+      sortable: false,
       valueGetter: (value, row) =>
-        row.quyen === "WAREHOUSE" ? row.kho || "—" : "—",
+        row.quyen === "WAREHOUSE"
+          ? formatKhoLabel(row.khoList || row.kho)
+          : "",
+      renderCell: (params) => {
+        if (params.row.quyen !== "WAREHOUSE") return "—";
+        const list = parseKhoList(params.row.khoList || params.row.kho);
+        if (!list.length) return "—";
+        return (
+          <Stack
+            direction="row"
+            spacing={0.5}
+            flexWrap="wrap"
+            useFlexGap
+            sx={{ py: 0.5 }}
+          >
+            {list.map((kho) => (
+              <Chip key={kho} size="small" label={shortKhoName(kho)} />
+            ))}
+          </Stack>
+        );
+      },
     },
     {
       field: "quyen",
@@ -147,7 +170,15 @@ export default function UserTable({
       rows={users}
       columns={columns}
       autoHeight
+      getRowHeight={() => "auto"}
       pageSizeOptions={[10, 20, 50]}
+      sx={{
+        "& .MuiDataGrid-cell": {
+          py: 1,
+          display: "flex",
+          alignItems: "center",
+        },
+      }}
       initialState={{
         pagination: {
           paginationModel: {

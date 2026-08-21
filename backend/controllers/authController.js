@@ -1,6 +1,7 @@
 const sequelize = require("../database/database");
 const User = require("../models/User");
 const Driver = require("../models/Driver");
+const { parseKhoList } = require("../utils/scopeHelpers");
 
 function phoneVariants(value) {
   const digits = String(value || "").replace(/\D/g, "");
@@ -86,6 +87,7 @@ exports.adminLogin = async (req, res) => {
 
     const plain = user.toJSON();
     delete plain.matKhau;
+    plain.khoList = parseKhoList(plain.kho);
 
     return res.json({
       success: true,
@@ -218,6 +220,7 @@ exports.driverLogin = async (req, res) => {
 
     const plain = typeof user.toJSON === "function" ? user.toJSON() : { ...user };
     delete plain.matKhau;
+    plain.khoList = parseKhoList(plain.kho);
 
     return res.json({
       success: true,

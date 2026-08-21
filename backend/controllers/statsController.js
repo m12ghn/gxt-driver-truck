@@ -10,6 +10,8 @@ const {
   applyWarehouseScope,
   getScopedKho,
   warehouseKhoFilter,
+  assertWarehouseAccess,
+  parseKhoList,
 } = require("../utils/scopeHelpers");
 const {
   getCheckInStatus,
@@ -169,6 +171,7 @@ exports.getDashboardStats = async (req, res) => {
         drivers: { total: totalDrivers, active: activeDrivers },
         trend,
         kho: scopedKho,
+        khoList: parseKhoList(scopedKho),
       },
     });
   } catch (err) {
@@ -396,8 +399,7 @@ async function buildReportData({ from, to, kho }) {
     ngay: { [Op.between]: [from, to] },
   };
 
-  // kho đã được resolve ở controller (WAREHOUSE bị ép kho của mình)
-  if (kho) where.kho = kho;
+  if (kho) where.kho = warehouseKhoFilter(kho);
 
   const assignments = await Assignment.findAll({
     where,
@@ -507,8 +509,20 @@ exports.getReportStats = async (req, res) => {
     if (!from) from = today;
     if (!to) to = from;
 
-    const scopedKho = getScopedKho(req);
-    if (scopedKho) kho = scopedKho;
+    if (req.user?.quyen === "WAREHOUSE") {
+      if (kho) {
+        try {
+          assertWarehouseAccess(req, kho);
+        } catch (scopeErr) {
+          return res.status(scopeErr.status || 403).json({
+            success: false,
+            message: scopeErr.message,
+          });
+        }
+      } else {
+        kho = getScopedKho(req);
+      }
+    }
 
     const data = await buildReportData({ from, to, kho });
 
@@ -538,8 +552,20 @@ exports.exportReportExcel = async (req, res) => {
     if (!from) from = today;
     if (!to) to = from;
 
-    const scopedKho = getScopedKho(req);
-    if (scopedKho) kho = scopedKho;
+    if (req.user?.quyen === "WAREHOUSE") {
+      if (kho) {
+        try {
+          assertWarehouseAccess(req, kho);
+        } catch (scopeErr) {
+          return res.status(scopeErr.status || 403).json({
+            success: false,
+            message: scopeErr.message,
+          });
+        }
+      } else {
+        kho = getScopedKho(req);
+      }
+    }
 
     const { summary, byDriver, byWarehouse } = await buildReportData({
       from,
