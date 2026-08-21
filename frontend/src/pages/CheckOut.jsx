@@ -17,6 +17,8 @@ import {
   CircularProgress,
   Chip,
   Button,
+  Stack,
+  TextField,
 } from "@mui/material";
 
 export default function CheckOut() {
@@ -28,6 +30,13 @@ export default function CheckOut() {
   const isAdmin =
     user?.quyen === "SUPER_ADMIN" ||
     user?.quyen === "ADMIN";
+
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
 
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,20 +55,12 @@ export default function CheckOut() {
 
   useEffect(() => {
     loadAssignments();
-  }, []);
+  }, [fromDate, toDate]);
 
   async function loadAssignments() {
     try {
-      const res = await getAssignments();
-
-      const today = new Date().toISOString().split("T")[0];
-
-      const data = res.data.data.filter(
-        (item) => item.ngay === today
-      );
-
-      setAssignments(data);
-
+      const res = await getAssignments(fromDate, toDate);
+      setAssignments(res.data.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -86,13 +87,43 @@ export default function CheckOut() {
   return (
     <Box>
 
-      <Typography variant="h4" mb={3}>
+      <Typography variant="h4" mb={2}>
         Giám sát Check Out
       </Typography>
 
-      <Typography mb={2}>
-        Tổng chuyến hôm nay: {assignments.length}
-      </Typography>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+        >
+          <TextField
+            type="date"
+            size="small"
+            label="Từ ngày"
+            InputLabelProps={{ shrink: true }}
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+
+          <TextField
+            type="date"
+            size="small"
+            label="Đến ngày"
+            InputLabelProps={{ shrink: true }}
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+
+          <Typography variant="body2" color="text.secondary">
+            Tổng chuyến: {assignments.length}
+            {fromDate === toDate
+              ? ` (${formatDate(fromDate)})`
+              : ` (${formatDate(fromDate)} – ${formatDate(toDate)})`}
+          </Typography>
+        </Stack>
+      </Paper>
 
       <Paper>
 
