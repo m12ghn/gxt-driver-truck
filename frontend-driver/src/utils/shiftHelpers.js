@@ -70,15 +70,27 @@ function formatDuration(minutes) {
   return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`;
 }
 
+function isoDate(ngay) {
+  return String(ngay || "").slice(0, 10);
+}
+
+function vietnamClock(ngay, hhmm) {
+  const day = isoDate(ngay);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !hhmm) return null;
+  const [h, m] = String(hhmm).split(":");
+  return new Date(
+    `${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00+07:00`
+  );
+}
+
 export function getCheckInStatus(checkInTime, ngay, ca) {
   if (!checkInTime || !ngay) return null;
 
   const shift = SHIFT_SCHEDULE[ca];
   if (!shift) return null;
 
-  const [h, m] = shift.start.split(":").map(Number);
-  const shiftStart = new Date(`${ngay}T00:00:00`);
-  shiftStart.setHours(h, m, 0, 0);
+  const shiftStart = vietnamClock(ngay, shift.start);
+  if (!shiftStart) return null;
 
   const actual = new Date(checkInTime);
   const diffMinutes = Math.round((actual - shiftStart) / 60000);
@@ -100,9 +112,8 @@ export function getCheckOutStatus(checkOutTime, ngay, ca) {
   const shift = SHIFT_SCHEDULE[ca];
   if (!shift) return null;
 
-  const [h, m] = shift.end.split(":").map(Number);
-  const shiftEnd = new Date(`${ngay}T00:00:00`);
-  shiftEnd.setHours(h, m, 0, 0);
+  const shiftEnd = vietnamClock(ngay, shift.end);
+  if (!shiftEnd) return null;
 
   const actual = new Date(checkOutTime);
   const diffMinutes = Math.round((actual - shiftEnd) / 60000);

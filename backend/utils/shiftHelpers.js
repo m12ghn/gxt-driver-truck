@@ -1,20 +1,34 @@
 // Giờ bắt đầu/kết thúc từng ca làm việc.
 // Cả 2 ca đều bắt đầu 7:30, chỉ khác giờ kết thúc.
-// (Bản sao của frontend/src/utils/shiftHelpers.js, dùng cho tính
-// toán thống kê ở server để Dashboard/Report không phải tính lại ở FE.)
+// So sánh theo Asia/Ho_Chi_Minh (UTC+7), không phụ thuộc timezone server.
 const SHIFT_SCHEDULE = {
   "Ca 1": { start: "07:30", end: "18:30" },
   "Ca 2": { start: "07:30", end: "19:30" },
 };
 
+function isoDate(ngay) {
+  return String(ngay || "").slice(0, 10);
+}
+
+function vietnamClock(ngay, hhmm) {
+  const day = isoDate(ngay);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !hhmm) return null;
+  const [h, m] = String(hhmm).split(":");
+  return new Date(
+    `${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00+07:00`
+  );
+}
+
 function getShiftStart(ngay, ca) {
   const shift = SHIFT_SCHEDULE[ca];
-  if (!shift || !ngay) return null;
+  if (!shift) return null;
+  return vietnamClock(ngay, shift.start);
+}
 
-  const [h, m] = shift.start.split(":").map(Number);
-  const shiftStart = new Date(`${ngay}T00:00:00`);
-  shiftStart.setHours(h, m, 0, 0);
-  return shiftStart;
+function getShiftEnd(ngay, ca) {
+  const shift = SHIFT_SCHEDULE[ca];
+  if (!shift) return null;
+  return vietnamClock(ngay, shift.end);
 }
 
 function getCheckInStatus(checkInTime, ngay, ca) {
@@ -33,8 +47,6 @@ function getCheckInStatus(checkInTime, ngay, ca) {
   return { late: true, minutes: diffMinutes };
 }
 
-// Cảnh báo "Chưa Check In": từ phút thứ 1 sau giờ vào ca (07:31)
-// nếu chuyến vẫn chưa có checkInTime.
 function getMissingCheckInAlert(ngay, ca, checkInTime, now = new Date()) {
   if (checkInTime) return null;
 
@@ -55,6 +67,9 @@ function getMissingCheckInAlert(ngay, ca, checkInTime, now = new Date()) {
 
 module.exports = {
   SHIFT_SCHEDULE,
+  vietnamClock,
+  getShiftStart,
+  getShiftEnd,
   getCheckInStatus,
   getMissingCheckInAlert,
 };
