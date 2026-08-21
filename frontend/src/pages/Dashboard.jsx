@@ -30,6 +30,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 import StatCard from "../components/StatCard";
 import { getDashboardStats, getAlerts } from "../api/statsApi";
@@ -89,13 +90,44 @@ function groupAlertItems(items = []) {
   return [...map.values()];
 }
 
-const ALERT_META = {
-  chuaCheckIn: { color: "#d32f2f", icon: <LoginIcon fontSize="small" /> },
-  choXacNhan: { color: "#6a1b9a", icon: <HourglassEmptyIcon fontSize="small" /> },
-  chuaHoanThanh: { color: "#c62828", icon: <ReportProblemIcon fontSize="small" /> },
-  late: { color: "#ef6c00", icon: <AccessTimeIcon fontSize="small" /> },
-  gps: { color: "#ad1457", icon: <GpsOffIcon fontSize="small" /> },
-};
+function groupAlertsByWarehouse(groups = []) {
+  const map = new Map();
+
+  for (const group of groups) {
+    const kho = group.kho || "Không rõ kho";
+    if (!map.has(kho)) {
+      map.set(kho, {
+        kho,
+        choXacNhan: 0,
+        late: 0,
+        gps: 0,
+        chuaCheckIn: 0,
+        chuaHoanThanh: 0,
+        lateTrips: [],
+        missingTrips: [],
+      });
+    }
+
+    const row = map.get(kho);
+    if (group.type === "choXacNhan") row.choXacNhan += group.count;
+    if (group.type === "late") {
+      row.late += group.count;
+      row.lateTrips = group.trips || [];
+    }
+    if (group.type === "gps") row.gps += group.count;
+    if (group.type === "chuaCheckIn") {
+      row.chuaCheckIn += group.count;
+      row.missingTrips = group.trips || [];
+    }
+    if (group.type === "chuaHoanThanh") row.chuaHoanThanh += group.count;
+  }
+
+  return [...map.values()].sort((a, b) => {
+    const score = (row) =>
+      row.chuaCheckIn * 4 + row.late * 3 + row.choXacNhan * 2 + row.gps;
+    return score(b) - score(a);
+  });
+}
 
 function SectionHeading({ children, sx }) {
   return (
@@ -124,6 +156,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState(null);
+  const [expandedKho, setExpandedKho] = useState(null);
 
   useEffect(() => {
     loadAll(true);
@@ -202,6 +235,7 @@ export default function Dashboard() {
     alerts.groups?.length > 0
       ? alerts.groups
       : groupAlertItems(alerts.items || []);
+  const warehouseAlerts = groupAlertsByWarehouse(alertGroups);
 
   const alertCards = [
     {
@@ -382,7 +416,7 @@ export default function Dashboard() {
           <Stack direction="row" alignItems="center" spacing={1}>
             <NotificationsActiveIcon sx={{ color: brand.teal, fontSize: 20 }} />
             <Typography variant="subtitle2" fontWeight={700}>
-              Danh sách cảnh báo
+              Cảnh báo theo kho
             </Typography>
             {(alertCounts.total || 0) > 0 && (
               <Chip
@@ -403,113 +437,155 @@ export default function Dashboard() {
           </Button>
         </Stack>
 
-        {(alertGroups || []).length === 0 ? (
+        {(warehouseAlerts || []).length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
             Không có cảnh báo cần xử lý.
           </Typography>
         ) : (
-          <Stack spacing={1}>
-            {alertGroups.map((group) => {
-              const meta = ALERT_META[group.type] || ALERT_META.late;
-              const showTrips =
-                group.type === "late" || group.type === "chuaCheckIn";
+          <Grid container spacing={1.25}>
+            {warehouseAlerts.map((row) => {
+              const open = expandedKho === row.kho;
+              const detailTrips = [
+                ...row.missingTrips.map((trip) => ({
+                  ...trip,
+                  kind: "missing",
+                })),
+                ...row.lateTrips.map((trip) => ({ ...trip, kind: "late" })),
+              ];
 
               return (
-                <Box
-                  key={`${group.type}-${group.kho}`}
-                  onClick={() => navigate("/assignments")}
-                  sx={{
-                    px: 1.5,
-                    py: 1.2,
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: "grey.200",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    "&:hover": {
-                      borderColor: alpha(meta.color, 0.45),
-                      bgcolor: alpha(meta.color, 0.04),
-                    },
-                  }}
-                >
+                <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={row.kho}>
                   <Box
                     sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1.5,
+                      height: "100%",
+                      px: 1.5,
+                      py: 1.25,
+                      borderRadius: 2,
+                      border: "1px solid",
+                      borderColor: "grey.200",
+                      bgcolor: "#fff",
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 1.5,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        bgcolor: alpha(meta.color, 0.12),
-                        color: meta.color,
-                        flexShrink: 0,
-                      }}
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      spacing={1}
                     >
-                      {meta.icon}
-                    </Box>
-
-                    <Box flex={1} minWidth={0}>
-                      <Typography
-                        sx={{ fontWeight: 700, fontSize: 13, lineHeight: 1.3 }}
-                      >
-                        {shortKho(group.kho)}
+                      <Typography fontWeight={800} fontSize={14} noWrap>
+                        {shortKho(row.kho)}
                       </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "block", lineHeight: 1.3 }}
-                      >
-                        {group.label}
-                      </Typography>
-                    </Box>
-
-                    <Chip
-                      size="small"
-                      label={`${group.count} chuyến`}
-                      sx={{
-                        bgcolor: alpha(meta.color, 0.12),
-                        color: meta.color,
-                        fontWeight: 700,
-                      }}
-                    />
-                  </Box>
-
-                  {showTrips && group.trips?.length > 0 && (
-                    <Stack spacing={0.5} sx={{ mt: 1, pl: 5.75 }}>
-                      {group.trips.map((trip) => (
-                        <Typography
-                          key={trip.id}
-                          variant="caption"
+                      {detailTrips.length > 0 && (
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            setExpandedKho(open ? null : row.kho)
+                          }
                           sx={{
-                            display: "block",
-                            color: "text.secondary",
-                            lineHeight: 1.45,
+                            p: 0.25,
+                            transform: open ? "rotate(180deg)" : "none",
+                            transition: "transform 0.15s ease",
                           }}
                         >
-                          {trip.driverName} · {trip.bienSo}
-                          {trip.checkInTime
-                            ? ` · CI ${formatCheckInTime(trip.checkInTime)}`
-                            : ""}
-                          {trip.minutes
-                            ? ` · ${
-                                group.type === "late" ? "Trễ" : "Đã"
-                              } ${formatMinutes(trip.minutes)}`
-                            : ""}
-                        </Typography>
-                      ))}
+                          <KeyboardArrowDownIcon fontSize="small" />
+                        </IconButton>
+                      )}
                     </Stack>
-                  )}
-                </Box>
+
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      flexWrap="wrap"
+                      useFlexGap
+                      mt={1}
+                    >
+                      {row.chuaCheckIn > 0 && (
+                        <Chip
+                          size="small"
+                          label={`Chưa CI ${row.chuaCheckIn}`}
+                          sx={{
+                            height: 22,
+                            fontWeight: 700,
+                            bgcolor: alpha("#d32f2f", 0.12),
+                            color: "#d32f2f",
+                          }}
+                        />
+                      )}
+                      {row.late > 0 && (
+                        <Chip
+                          size="small"
+                          label={`Trễ ${row.late}`}
+                          sx={{
+                            height: 22,
+                            fontWeight: 700,
+                            bgcolor: alpha("#ef6c00", 0.12),
+                            color: "#ef6c00",
+                          }}
+                        />
+                      )}
+                      {row.choXacNhan > 0 && (
+                        <Chip
+                          size="small"
+                          label={`Chờ XN ${row.choXacNhan}`}
+                          sx={{
+                            height: 22,
+                            fontWeight: 700,
+                            bgcolor: alpha("#6a1b9a", 0.12),
+                            color: "#6a1b9a",
+                          }}
+                        />
+                      )}
+                      {row.gps > 0 && (
+                        <Chip
+                          size="small"
+                          label={`GPS ${row.gps}`}
+                          sx={{
+                            height: 22,
+                            fontWeight: 700,
+                            bgcolor: alpha("#ad1457", 0.12),
+                            color: "#ad1457",
+                          }}
+                        />
+                      )}
+                      {row.chuaHoanThanh > 0 && (
+                        <Chip
+                          size="small"
+                          label={`Quá hạn ${row.chuaHoanThanh}`}
+                          sx={{
+                            height: 22,
+                            fontWeight: 700,
+                            bgcolor: alpha("#c62828", 0.12),
+                            color: "#c62828",
+                          }}
+                        />
+                      )}
+                    </Stack>
+
+                    {open && detailTrips.length > 0 && (
+                      <Stack spacing={0.5} sx={{ mt: 1.25 }}>
+                        {detailTrips.map((trip) => (
+                          <Typography
+                            key={`${trip.kind}-${trip.id}`}
+                            variant="caption"
+                            sx={{ color: "text.secondary", lineHeight: 1.45 }}
+                          >
+                            {trip.kind === "late" ? "Trễ" : "Chưa CI"} ·{" "}
+                            {trip.driverName} · {trip.bienSo}
+                            {trip.checkInTime
+                              ? ` · ${formatCheckInTime(trip.checkInTime)}`
+                              : ""}
+                            {trip.minutes
+                              ? ` · ${formatMinutes(trip.minutes)}`
+                              : ""}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+                </Grid>
               );
             })}
-          </Stack>
+          </Grid>
         )}
       </Paper>
 
