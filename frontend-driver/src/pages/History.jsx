@@ -7,6 +7,9 @@ import {
   CircularProgress,
   IconButton,
   Stack,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -19,6 +22,8 @@ import {
   getCheckInStatus,
   getCheckOutStatus,
   SHIFT_PAY,
+  currentPayPeriod,
+  getPayPeriodRange,
 } from "../utils/shiftHelpers";
 
 const TEAL = "#0F9B94";
@@ -306,21 +311,29 @@ function TripCard({ item }) {
 
 export default function History() {
   const user = JSON.parse(localStorage.getItem("driverUser") || "null");
+  const initialPeriod = currentPayPeriod();
 
+  const [monthValue, setMonthValue] = useState(
+    `${initialPeriod.year}-${String(initialPeriod.month).padStart(2, "0")}`
+  );
+  const [ky, setKy] = useState(initialPeriod.ky);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
 
+  const [year, month] = monthValue.split("-").map(Number);
+  const range = getPayPeriodRange(year, month, ky);
+
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [monthValue, ky]);
 
   async function loadHistory() {
     setLoading(true);
     setConnectionError(false);
 
     try {
-      const res = await getAssignmentHistory(user.msnv);
+      const res = await getAssignmentHistory(user.msnv, range.from, range.to);
       setAssignments(res.data.data || []);
     } catch (err) {
       console.error(err);
@@ -329,6 +342,11 @@ export default function History() {
       setLoading(false);
     }
   }
+
+  const totalPay = assignments.reduce(
+    (sum, item) => sum + (SHIFT_PAY[item.ca] || 0),
+    0
+  );
 
   return (
     <Box
@@ -366,6 +384,60 @@ export default function History() {
         </IconButton>
       </Box>
 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.5,
+          mb: 2,
+          borderRadius: 3,
+          border: "1px solid #E5E7EB",
+        }}
+      >
+        <Stack spacing={1.25}>
+          <TextField
+            type="month"
+            size="small"
+            label="Tháng"
+            value={monthValue}
+            onChange={(e) => {
+              if (e.target.value) setMonthValue(e.target.value);
+            }}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+          />
+
+          <ToggleButtonGroup
+            exclusive
+            fullWidth
+            size="small"
+            value={ky}
+            onChange={(_, value) => {
+              if (value) setKy(value);
+            }}
+            sx={{
+              "& .MuiToggleButton-root": {
+                fontWeight: 700,
+                textTransform: "none",
+              },
+              "& .Mui-selected": {
+                bgcolor: `${TEAL} !important`,
+                color: "#fff !important",
+              },
+            }}
+          >
+            <ToggleButton value={1}>Kỳ 1 · 01–15</ToggleButton>
+            <ToggleButton value={2}>Kỳ 2 · 16–cuối tháng</ToggleButton>
+          </ToggleButtonGroup>
+
+          <Typography variant="body2" color="text.secondary">
+            {formatDay(range.from)} – {formatDay(range.to)}
+            {!loading && !connectionError
+              ? ` · ${assignments.length} chuyến · ${formatVnd(totalPay)}`
+              : ""}
+          </Typography>
+        </Stack>
+      </Paper>
+
       {loading && (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress sx={{ color: TEAL }} />
@@ -382,7 +454,9 @@ export default function History() {
 
       {!loading && !connectionError && assignments.length === 0 && (
         <Paper sx={{ p: 3, borderRadius: 3, textAlign: "center" }}>
-          <Typography color="text.secondary">Chưa có chuyến nào.</Typography>
+          <Typography color="text.secondary">
+            Không có chuyến trong kỳ này.
+          </Typography>
         </Paper>
       )}
 
