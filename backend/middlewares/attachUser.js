@@ -1,5 +1,21 @@
 const User = require("../models/User");
 const { parseKhoList } = require("../utils/scopeHelpers");
+const { ensureUserKhoColumn } = require("../utils/ensureUserKhoColumn");
+
+function parseHeaderKho(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  try {
+    return parseKhoList(decodeURIComponent(raw));
+  } catch {
+    return parseKhoList(raw);
+  }
+}
+
+function isBrokenKhoName(name) {
+  const text = String(name || "").trim();
+  return !text || text.startsWith("[") || text.includes('["');
+}
 
 // Gắn req.user từ header (FE gửi sau khi login).
 // SUPER_ADMIN không nằm trong bảng Users — nhận qua x-user-quyen.
@@ -25,6 +41,8 @@ async function attachUser(req, res, next) {
       return next();
     }
 
+    await ensureUserKhoColumn();
+
     const user = await User.findOne({ where: { msnv } });
 
     if (!user || user.trangThai === "Khóa") {
@@ -32,16 +50,19 @@ async function attachUser(req, res, next) {
       return next();
     }
 
-    const khoList = parseKhoList(user.kho);
-    const headerKho = parseKhoList(req.headers["x-user-kho"]);
+    const fromDb = parseKhoList(user.kho).filter((name) => !isBrokenKhoName(name));
+    const fromHeader = parseHeaderKho(req.headers["x-user-kho"]).filter(
+      (name) => !isBrokenKhoName(name)
+    );
+    const khoList = [...new Set([...fromDb, ...fromHeader])];
 
     req.user = {
       id: user.id,
       msnv: user.msnv,
       hoTen: user.hoTen,
       quyen: user.quyen,
-      kho: user.kho || (headerKho.length ? headerKho : null),
-      khoList: khoList.length ? khoList : headerKho,
+      kho: khoList.length ? khoList : user.kho,
+      khoList,
     };
 
     next();

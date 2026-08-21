@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
       }
       const khoList = parseKhoList(user.khoList || user.kho);
       if (khoList.length) {
-        config.headers["x-user-kho"] = JSON.stringify(khoList);
+        config.headers["x-user-kho"] = encodeURIComponent(khoList.join("|"));
       }
     }
   } catch {

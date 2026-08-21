@@ -42,7 +42,7 @@ import {
 export default function Assignment() {
 
   const user = JSON.parse(
-    localStorage.getItem("user")
+    localStorage.getItem("user") || "{}"
   );
 
   const isAdmin =
@@ -446,7 +446,7 @@ export default function Assignment() {
               label="Kho"
               value={formatKhoLabel(managedKhoList) || "Chưa gán kho"}
               InputProps={{ readOnly: true }}
-              sx={{ width: 180 }}
+              sx={{ minWidth: 180, maxWidth: 280 }}
             />
           ) : (
             <TextField
@@ -457,10 +457,10 @@ export default function Assignment() {
               onChange={(e) =>
                 setKhoFilter(e.target.value)
               }
-              sx={{ width: 180 }}
+              sx={{ minWidth: 180, maxWidth: 280 }}
             >
               <MenuItem value="">
-                Tất cả
+                {isWarehouse ? "Tất cả kho phụ trách" : "Tất cả"}
               </MenuItem>
 
               {(isWarehouse ? managedKhoList : khoOptions).map((kho) => (

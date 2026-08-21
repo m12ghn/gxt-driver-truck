@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const { parseKhoList, serializeKhoList } = require("../utils/scopeHelpers");
+const { ensureUserKhoColumn } = require("../utils/ensureUserKhoColumn");
 
 function resolveWarehouseKho(quyen, kho) {
   if (quyen !== "WAREHOUSE") return null;
@@ -33,6 +34,7 @@ exports.getAll = async (req, res) => {
 // ==========================
 exports.create = async (req, res) => {
   try {
+    await ensureUserKhoColumn();
     const {
       msnv,
       hoTen,
@@ -113,6 +115,7 @@ exports.create = async (req, res) => {
 // ==========================
 exports.update = async (req, res) => {
   try {
+    await ensureUserKhoColumn();
     const { id } = req.params;
 
     const {

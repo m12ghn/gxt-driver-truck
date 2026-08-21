@@ -31,20 +31,72 @@ export function officialWarehouseNames(list) {
   return unique.sort((a, b) => a.localeCompare(b, "vi"));
 }
 
+function knownKhoNames() {
+  return [
+    ...warehouses,
+    ...Object.keys(SHORT_BY_OFFICIAL),
+    ...Object.values(SHORT_BY_OFFICIAL),
+  ];
+}
+
+function recoverKhoNames(raw) {
+  const text = String(raw || "");
+  const found = [];
+
+  for (const match of text.matchAll(/"([^"]+)"/g)) {
+    const name = String(match[1] || "").trim();
+    if (name.startsWith("Kho ") || SHORT_BY_OFFICIAL[name]) found.push(name);
+  }
+
+  const known = knownKhoNames().sort((a, b) => b.length - a.length);
+  for (const name of known) {
+    if (name && text.includes(name)) found.push(name);
+  }
+
+  return uniqueNames(found);
+}
+
+function uniqueNames(list) {
+  return [
+    ...new Set(
+      (list || [])
+        .map((item) => String(item || "").trim())
+        .filter((name) => name && !name.startsWith("[") && name !== "__NO_KHO__")
+    ),
+  ];
+}
+
 export function parseKhoList(kho) {
   if (Array.isArray(kho)) {
-    return [...new Set(kho.map((item) => String(item || "").trim()).filter(Boolean))];
+    const out = [];
+    for (const item of kho) {
+      if (item == null || item === "") continue;
+      if (Array.isArray(item)) {
+        out.push(...parseKhoList(item));
+        continue;
+      }
+      const s = String(item).trim();
+      if (!s) continue;
+      if (s.startsWith("[") || s.startsWith("\"") || s.includes("|")) {
+        out.push(...parseKhoList(s));
+      } else {
+        out.push(s);
+      }
+    }
+    return uniqueNames(out);
   }
 
   const raw = String(kho || "").trim();
   if (!raw) return [];
 
-  if (raw.startsWith("[")) {
+  if (raw.startsWith("[") || raw.startsWith("\"")) {
     try {
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
       if (Array.isArray(parsed)) return parseKhoList(parsed);
     } catch {
-      // keep falling through
+      const recovered = recoverKhoNames(raw);
+      if (recovered.length) return recovered;
     }
   }
 
@@ -52,7 +104,9 @@ export function parseKhoList(kho) {
     return parseKhoList(raw.split("|"));
   }
 
-  return [raw];
+  if (raw.startsWith("[")) return recoverKhoNames(raw);
+
+  return uniqueNames([raw]);
 }
 
 export function shortKhoName(name) {
