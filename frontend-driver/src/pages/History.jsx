@@ -343,10 +343,10 @@ export default function History() {
     }
   }
 
-  const totalPay = assignments.reduce(
-    (sum, item) => sum + (SHIFT_PAY[item.ca] || 0),
-    0
-  );
+  const totalPay = assignments.reduce((sum, item) => {
+    if (item.trangThai !== "Hoàn thành") return sum;
+    return sum + (SHIFT_PAY[item.ca] || 0);
+  }, 0);
 
   return (
     <Box
