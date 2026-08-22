@@ -38,12 +38,15 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
     }
 
     try {
-      await updateWarehouse(warehouse.id, {
+      const res = await updateWarehouse(warehouse.id, {
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         banKinh: Number(form.banKinh),
       });
-      alert("Đã cập nhật tọa độ kho.");
+      alert(
+        res.data?.message ||
+          "Đã cập nhật kho và tính lại GPS Check In/Out theo bán kính mới."
+      );
       onClose(true);
     } catch (err) {
       console.error(err);

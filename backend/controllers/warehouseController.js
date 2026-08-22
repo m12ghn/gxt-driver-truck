@@ -2,6 +2,10 @@ const { Op } = require("sequelize");
 const Warehouse = require("../models/Warehouse");
 const { ensureWarehouses } = require("../utils/ensureWarehouses");
 const { getUserKhoVariants, userKhoValue } = require("../utils/scopeHelpers");
+const {
+  recalculateAssignmentGpsForWarehouse,
+  syncSiblingWarehouseCoords,
+} = require("../utils/recalculateAssignmentGps");
 
 exports.getWarehouses = async (req, res) => {
   try {
@@ -67,11 +71,18 @@ exports.updateWarehouse = async (req, res) => {
       });
     }
 
-    await warehouse.update({ latitude, longitude, banKinh });
+    const coords = { latitude, longitude, banKinh };
+    await warehouse.update(coords);
+    await syncSiblingWarehouseCoords(warehouse, coords);
+    const updatedGps = await recalculateAssignmentGpsForWarehouse(warehouse);
 
     res.json({
       success: true,
-      message: "Đã cập nhật tọa độ kho.",
+      message:
+        updatedGps > 0
+          ? `Đã cập nhật kho và tính lại GPS ${updatedGps} chuyến theo bán kính ${banKinh}m.`
+          : "Đã cập nhật tọa độ kho.",
+      updatedGps,
       data: warehouse,
     });
   } catch (err) {
