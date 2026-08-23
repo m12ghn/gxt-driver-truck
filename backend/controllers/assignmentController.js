@@ -8,6 +8,7 @@ const IncidentReport = require("../models/IncidentReport");
 
 const {
   vietnamToday,
+  formatVietnamDateTime,
   assignmentDays,
   assignmentDateText,
   parseNgay,
@@ -255,11 +256,6 @@ exports.exportExcel = async (req, res) => {
       ],
     });
 
-    function formatDateTime(date) {
-      if (!date) return "";
-      return new Date(date).toLocaleString("vi-VN");
-    }
-
     const rows = assignments.map((item) => ({
       "Ngày": item.ngay,
       "Ca": item.ca,
@@ -268,19 +264,39 @@ exports.exportExcel = async (req, res) => {
       "MSNV": item.Driver?.msnv || "",
       "Họ tên": item.Driver?.hoTen || "",
       "SĐT": item.Driver?.soDienThoai || "",
-      "Check In - Thời gian": item.checkInTime
-        ? formatDateTime(item.checkInTime)
-        : "",
+      "Check In - Thời gian": formatVietnamDateTime(item.checkInTime),
       "Check In - ODO": item.odoCheckIn ?? "",
-      "Check Out - Thời gian": item.checkOutTime
-        ? formatDateTime(item.checkOutTime)
-        : "",
+      "Check Out - Thời gian": formatVietnamDateTime(item.checkOutTime),
       "Check Out - ODO": item.odoCheckOut ?? "",
       "User xác nhận": item.warehouseConfirmBy || "",
       "Mã chuyến đi": item.maChuyenDi || "",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
+    const range = worksheet["!ref"]
+      ? XLSX.utils.decode_range(worksheet["!ref"])
+      : null;
+    if (range) {
+      const timeHeaders = new Set([
+        "Check In - Thời gian",
+        "Check Out - Thời gian",
+      ]);
+      const timeCols = [];
+      for (let col = range.s.c; col <= range.e.c; col += 1) {
+        const header = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
+        if (header && timeHeaders.has(String(header.v))) timeCols.push(col);
+      }
+      for (const col of timeCols) {
+        for (let row = 1; row <= range.e.r; row += 1) {
+          const addr = XLSX.utils.encode_cell({ r: row, c: col });
+          const cell = worksheet[addr];
+          if (!cell || cell.v === "" || cell.v == null) continue;
+          cell.t = "s";
+          cell.v = String(cell.v);
+          cell.z = "@";
+        }
+      }
+    }
     const workbook = XLSX.utils.book_new();
 
     XLSX.utils.book_append_sheet(

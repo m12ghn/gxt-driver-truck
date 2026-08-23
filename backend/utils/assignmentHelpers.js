@@ -10,6 +10,29 @@ function vietnamToday() {
   });
 }
 
+function formatVietnamDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour12: false,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  );
+
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
 function addDays(isoDate, n) {
   const [year, month, day] = String(isoDate)
     .slice(0, 10)
@@ -208,6 +231,7 @@ async function findUnfinishedAssignment({
 
 module.exports = {
   vietnamToday,
+  formatVietnamDateTime,
   addDays,
   assignmentDateText,
   parseNgay,
