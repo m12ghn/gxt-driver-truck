@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { getVehicles } from "../api/vehicleApi";
 import { getDrivers } from "../api/driverApi";
-import { createAssignment } from "../api/assignmentApi";
+import { createAssignment, updateAssignment } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { warehouses as fallbackWarehouses, officialWarehouseNames } from "../constants/warehouses";
+import {
+  warehouses as fallbackWarehouses,
+  officialWarehouseNames,
+  shortKhoName,
+} from "../constants/warehouses";
 
 import {
   Dialog,
@@ -20,6 +24,7 @@ export default function AssignmentDialog({
   open,
   onClose,
   onSuccess,
+  assignment,
 }) {
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
@@ -36,14 +41,29 @@ export default function AssignmentDialog({
   const [vehicleId, setVehicleId] = useState("");
   const [driverId, setDriverId] = useState("");
 
+  const isEdit = Boolean(assignment?.id);
+
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+
+    loadVehicles();
+    loadDrivers();
+    loadWarehouses();
+
+    if (assignment) {
+      setNgay(String(assignment.ngay || "").slice(0, 10) || vietnamToday());
+      setCa(assignment.ca || "");
+      setKho(assignment.kho || "");
+      setVehicleId(assignment.vehicleId || "");
+      setDriverId(assignment.driverId || "");
+    } else {
       setNgay(vietnamToday());
-      loadVehicles();
-      loadDrivers();
-      loadWarehouses();
+      setCa("");
+      setKho("");
+      setVehicleId("");
+      setDriverId("");
     }
-  }, [open]);
+  }, [open, assignment]);
 
   async function loadVehicles() {
     try {
@@ -63,7 +83,13 @@ export default function AssignmentDialog({
       const list = officialWarehouseNames(res.data?.data || []);
       if (list.length) {
         setKhoOptions(list);
-        setKho((prev) => prev || (list.length === 1 ? list[0] : ""));
+        setKho((prev) => {
+          if (!prev) return list.length === 1 ? list[0] : "";
+          const matched = list.find(
+            (item) => item === prev || shortKhoName(item) === shortKhoName(prev)
+          );
+          return matched || prev;
+        });
       }
     } catch (err) {
       console.error(err);
@@ -92,15 +118,21 @@ export default function AssignmentDialog({
     }
 
     try {
-      await createAssignment({
+      const payload = {
         ngay,
         ca,
         kho,
         vehicleId: Number(vehicleId),
         driverId: Number(driverId),
-      });
+      };
 
-      alert("Thêm phân công thành công!");
+      if (isEdit) {
+        await updateAssignment(assignment.id, payload);
+        alert("Cập nhật phân công thành công.");
+      } else {
+        await createAssignment(payload);
+        alert("Thêm phân công thành công!");
+      }
 
       if (onSuccess) {
         onSuccess();
@@ -113,7 +145,7 @@ export default function AssignmentDialog({
 
       alert(
         err.response?.data?.message ||
-          "Thêm phân công thất bại!"
+          (isEdit ? "Cập nhật phân công thất bại." : "Thêm phân công thất bại!")
       );
     }
   }
@@ -136,7 +168,7 @@ export default function AssignmentDialog({
       maxWidth="sm"
     >
       <DialogTitle>
-        Thêm phân công
+        {isEdit ? "Sửa phân công" : "Thêm phân công"}
       </DialogTitle>
 
       <DialogContent>
@@ -199,7 +231,9 @@ export default function AssignmentDialog({
             >
               {vehicles
                 .filter(
-                  (v) => v.trangThai === "Hoạt động"
+                  (v) =>
+                    v.trangThai === "Hoạt động" ||
+                    Number(v.id) === Number(vehicleId)
                 )
                 .map((vehicle) => (
                   <MenuItem
@@ -222,7 +256,9 @@ export default function AssignmentDialog({
             >
               {drivers
                 .filter(
-                  (d) => d.trangThai === "Đang làm"
+                  (d) =>
+                    d.trangThai === "Đang làm" ||
+                    Number(d.id) === Number(driverId)
                 )
                 .map((driver) => (
                   <MenuItem
@@ -249,7 +285,7 @@ export default function AssignmentDialog({
           variant="contained"
           onClick={handleSave}
         >
-          Lưu
+          {isEdit ? "Cập nhật" : "Lưu"}
         </Button>
 
       </DialogActions>

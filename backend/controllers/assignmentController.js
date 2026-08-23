@@ -786,19 +786,23 @@ exports.updateAssignment = async (req, res) => {
 
     if (denyIfOutOfScope(req, res, assignment)) return;
 
-    const ngay = req.body.ngay || assignment.ngay;
+    let ngay = parseNgay(req.body.ngay) || assignment.ngay;
+    let kho = req.body.kho || assignment.kho;
+    const ca = req.body.ca || assignment.ca;
     const vehicleId = req.body.vehicleId || assignment.vehicleId;
     const driverId = req.body.driverId || assignment.driverId;
 
-    if (req.user?.quyen === "WAREHOUSE" && req.body.kho) {
-      try {
-        req.body.kho = assertWarehouseKhoChoice(req, req.body.kho);
-      } catch (scopeErr) {
-        return res.status(scopeErr.status || 403).json({
-          success: false,
-          message: scopeErr.message,
-        });
+    try {
+      if (req.user?.quyen === "WAREHOUSE") {
+        kho = assertWarehouseKhoChoice(req, kho);
+      } else {
+        kho = normalizeKhoName(kho);
       }
+    } catch (scopeErr) {
+      return res.status(scopeErr.status || 403).json({
+        success: false,
+        message: scopeErr.message,
+      });
     }
 
     // ==============================
@@ -845,10 +849,17 @@ exports.updateAssignment = async (req, res) => {
       });
     }
 
-    await assignment.update(req.body);
+    await assignment.update({
+      ngay,
+      ca,
+      kho,
+      vehicleId,
+      driverId,
+    });
 
     res.json({
       success: true,
+      message: "Cập nhật phân công thành công.",
       data: assignment,
     });
 

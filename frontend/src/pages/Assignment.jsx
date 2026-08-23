@@ -78,6 +78,9 @@ export default function Assignment() {
   const [openDialog, setOpenDialog] =
     useState(false);
 
+  const [editingAssignment, setEditingAssignment] =
+    useState(null);
+
   // ==========================
   // Kho xác nhận
   // ==========================
@@ -364,9 +367,10 @@ export default function Assignment() {
             <Button
               variant="outlined"
               size="small"
-              onClick={() =>
-                setOpenDialog(true)
-              }
+              onClick={() => {
+                setEditingAssignment(null);
+                setOpenDialog(true);
+              }}
             >
               + PHÂN CÔNG
             </Button>
@@ -889,15 +893,30 @@ export default function Assignment() {
 
       <TableCell align="center">
 
-        <Button
-          color="error"
-          size="small"
-          onClick={() =>
-            handleDelete(item)
-          }
+        <Stack
+          direction="row"
+          spacing={0.5}
+          justifyContent="center"
         >
-          Xóa
-        </Button>
+          <Button
+            size="small"
+            onClick={() => {
+              setEditingAssignment(item);
+              setOpenDialog(true);
+            }}
+          >
+            Sửa
+          </Button>
+          <Button
+            color="error"
+            size="small"
+            onClick={() =>
+              handleDelete(item)
+            }
+          >
+            Xóa
+          </Button>
+        </Stack>
 
       </TableCell>
 
@@ -930,7 +949,11 @@ export default function Assignment() {
 
       <AssignmentDialog
         open={openDialog}
-        onClose={() => setOpenDialog(false)}
+        assignment={editingAssignment}
+        onClose={() => {
+          setOpenDialog(false);
+          setEditingAssignment(null);
+        }}
         onSuccess={handleAssignmentSuccess}
       />
 
