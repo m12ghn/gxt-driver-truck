@@ -97,7 +97,7 @@ export const deleteAssignment = (id) => {
 // ==============================
 // Import Excel
 // ==============================
-export const importAssignmentExcel = (file) => {
+export const importAssignmentExcel = (file, onUploadProgress) => {
 
   const formData = new FormData();
 
@@ -110,6 +110,7 @@ export const importAssignmentExcel = (file) => {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      onUploadProgress,
     }
   );
 

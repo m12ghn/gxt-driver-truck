@@ -16,6 +16,11 @@ import {
   TextField,
   MenuItem,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  LinearProgress,
 } from "@mui/material";
 
 import AssignmentDialog from "../components/AssignmentDialog";
@@ -115,6 +120,7 @@ export default function Assignment() {
 
   const [khoFilter, setKhoFilter] = useState("");
   const [managedKhoList, setManagedKhoList] = useState(userKhoList);
+  const [importState, setImportState] = useState(null);
 
   useEffect(() => {
     if (!isWarehouse) return;
@@ -211,31 +217,49 @@ export default function Assignment() {
   async function handleImport(event) {
 
     const file = event.target.files[0];
+    event.target.value = "";
 
     if (!file) return;
 
+    const busy = ["uploading", "processing"];
+    setImportState({
+      status: "uploading",
+      fileName: file.name,
+      percent: 0,
+      imported: 0,
+      errors: [],
+      message: "Đã nhận file. Đang tải lên...",
+    });
+
     try {
 
-      const res =
-        await importAssignmentExcel(file);
+      const res = await importAssignmentExcel(file, (event) => {
+        const total = event.total || file.size || 0;
+        const percent = total
+          ? Math.min(100, Math.round((event.loaded * 100) / total))
+          : 0;
+        setImportState((prev) => {
+          if (!prev || !busy.includes(prev.status)) return prev;
+          const done = percent >= 100;
+          return {
+            ...prev,
+            status: done ? "processing" : "uploading",
+            percent,
+            message: done
+              ? "Đã nhận file. Đang đọc Excel và lưu phân công..."
+              : `Đã nhận file. Đang tải lên... ${percent}%`,
+          };
+        });
+      });
 
-      let message =
-        `✅ Import thành công ${res.data.imported} dòng`;
-
-      if (
-        res.data.errors &&
-        res.data.errors.length > 0
-      ) {
-
-        message +=
-`\n\n❌ Có ${res.data.errors.length} lỗi:\n\n`;
-
-        message +=
-          res.data.errors.join("\n");
-
-      }
-
-      alert(message);
+      setImportState((prev) => ({
+        ...(prev || {}),
+        status: "success",
+        percent: 100,
+        imported: res.data.imported || 0,
+        errors: res.data.errors || [],
+        message: `Import thành công ${res.data.imported || 0} dòng.`,
+      }));
 
       loadAssignments();
 
@@ -243,14 +267,16 @@ export default function Assignment() {
 
       console.error(err);
 
-      alert(
-        err.response?.data?.message ||
-        "Import thất bại"
-      );
+      setImportState((prev) => ({
+        ...(prev || {}),
+        status: "error",
+        percent: 0,
+        imported: 0,
+        errors: [],
+        message: err.response?.data?.message || "Import thất bại.",
+      }));
 
     }
-
-    event.target.value = "";
 
   }
 
@@ -379,13 +405,24 @@ export default function Assignment() {
               variant="contained"
               size="small"
               component="label"
+              disabled={
+                importState?.status === "uploading" ||
+                importState?.status === "processing"
+              }
             >
-              IMPORT EXCEL
+              {importState?.status === "uploading" ||
+              importState?.status === "processing"
+                ? "ĐANG IMPORT..."
+                : "IMPORT EXCEL"}
 
               <input
                 hidden
                 type="file"
                 accept=".xlsx,.xls"
+                disabled={
+                  importState?.status === "uploading" ||
+                  importState?.status === "processing"
+                }
                 onChange={handleImport}
               />
 
@@ -991,6 +1028,92 @@ export default function Assignment() {
         assignment={selectedAssignment}
         onClose={() => setOpenAssignmentDetail(false)}
       />
+
+      <Dialog
+        open={Boolean(importState)}
+        onClose={() => {
+          if (
+            importState?.status === "uploading" ||
+            importState?.status === "processing"
+          ) {
+            return;
+          }
+          setImportState(null);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Import Excel phân công</DialogTitle>
+        <DialogContent>
+          <Typography fontWeight={600} mb={0.5}>
+            {importState?.fileName || "Đang chọn file..."}
+          </Typography>
+
+          {(importState?.status === "uploading" ||
+            importState?.status === "processing") && (
+            <Box mt={1.5}>
+              <LinearProgress
+                variant={
+                  importState.status === "uploading" && importState.percent > 0
+                    ? "determinate"
+                    : "indeterminate"
+                }
+                value={importState.percent || 0}
+              />
+              <Typography variant="body2" color="text.secondary" mt={1.25}>
+                {importState.message}
+              </Typography>
+            </Box>
+          )}
+
+          {importState?.status === "success" && (
+            <Box mt={1.5}>
+              <Typography>
+                {importState.message}
+              </Typography>
+              {importState.errors?.length > 0 && (
+                <Box
+                  mt={1.5}
+                  sx={{
+                    maxHeight: 240,
+                    overflow: "auto",
+                    p: 1.5,
+                    bgcolor: "grey.50",
+                    borderRadius: 1,
+                    whiteSpace: "pre-wrap",
+                    fontSize: 13,
+                  }}
+                >
+                  <Typography fontWeight={700} mb={1}>
+                    Có {importState.errors.length} dòng lỗi:
+                  </Typography>
+                  {importState.errors.join("\n")}
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {importState?.status === "error" && (
+            <Typography color="error" mt={1.5}>
+              {importState.message}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            disabled={
+              importState?.status === "uploading" ||
+              importState?.status === "processing"
+            }
+            onClick={() => setImportState(null)}
+          >
+            {importState?.status === "uploading" ||
+            importState?.status === "processing"
+              ? "Đang xử lý..."
+              : "Đóng"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Box>
 
