@@ -1,16 +1,14 @@
 const XLSX = require("xlsx");
 const { Op } = require("sequelize");
 
-const sequelize = require("../database/database");
 const Assignment = require("../models/Assignment");
 const Vehicle = require("../models/Vehicle");
 const Driver = require("../models/Driver");
 const User = require("../models/User");
 
 const {
-  markOverdueAssignments,
-  findDriversByMsnv,
   normalizeMsnv,
+  driverMatchesMsnv,
   parseNgay,
 } = require("../utils/assignmentHelpers");
 const {
@@ -55,8 +53,6 @@ exports.importExcel = async (req, res) => {
       });
     }
 
-    await markOverdueAssignments();
-
     const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -66,8 +62,52 @@ exports.importExcel = async (req, res) => {
       dateNF: "dd/mm/yyyy",
     });
 
+    const vehicles = await Vehicle.findAll({
+      attributes: ["id", "bienSo"],
+    });
+    const drivers = await Driver.findAll({
+      attributes: ["id", "msnv", "hoTen", "soDienThoai", "kho", "trangThai"],
+    });
+    const driverUsers = await User.findAll({
+      attributes: ["msnv", "hoTen", "soDienThoai", "kho", "trangThai", "quyen"],
+    });
+
+    const vehicleByPlate = new Map();
+    for (const item of vehicles) {
+      const plate = String(item.bienSo || "")
+        .replace(/\u00a0/g, " ")
+        .trim()
+        .toLowerCase();
+      if (plate) vehicleByPlate.set(plate, item);
+    }
+
+    function findDriver(msnv) {
+      return drivers.find((item) => driverMatchesMsnv(item, msnv));
+    }
+
+    const dates = [];
+    for (const row of rows) {
+      const ngay = parseNgay(cell(row, "Ngày", "Ngay", "Date"));
+      if (ngay) dates.push(ngay);
+    }
+
+    const existing = dates.length
+      ? await Assignment.findAll({
+          where: { ngay: { [Op.in]: [...new Set(dates)] } },
+          attributes: ["ngay", "vehicleId", "driverId"],
+        })
+      : [];
+
+    const takenVehicle = new Set(
+      existing.map((item) => `${String(item.ngay).slice(0, 10)}|${item.vehicleId}`)
+    );
+    const takenDriver = new Set(
+      existing.map((item) => `${String(item.ngay).slice(0, 10)}|${item.driverId}`)
+    );
+
     let success = 0;
     let errors = [];
+    const toCreate = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -91,17 +131,8 @@ exports.importExcel = async (req, res) => {
         continue;
       }
 
-      const vehicle = await Vehicle.findOne({
-        where: {
-          [Op.or]: [
-            { bienSo },
-            sequelize.where(
-              sequelize.fn("trim", sequelize.col("bienSo")),
-              bienSo
-            ),
-          ],
-        },
-      });
+      const plateKey = bienSo.replace(/\u00a0/g, " ").trim().toLowerCase();
+      const vehicle = vehicleByPlate.get(plateKey);
 
       if (!vehicle) {
         errors.push(
@@ -110,22 +141,16 @@ exports.importExcel = async (req, res) => {
         continue;
       }
 
-      let driver = (await findDriversByMsnv(msnv))[0];
+      let driver = findDriver(msnv);
 
       if (!driver && msnv) {
-        const user = await User.findOne({
-          where: {
-            [Op.or]: [
-              { msnv },
-              sequelize.where(
-                sequelize.fn("trim", sequelize.col("msnv")),
-                msnv
-              ),
-            ],
-          },
-        });
+        const user = driverUsers.find(
+          (item) =>
+            driverMatchesMsnv({ msnv: item.msnv }, msnv) &&
+            String(item.quyen || "").toUpperCase() === "DRIVER"
+        );
 
-        if (user && String(user.quyen || "").toUpperCase() === "DRIVER") {
+        if (user) {
           driver = await Driver.create({
             msnv: normalizeMsnv(user.msnv),
             hoTen: user.hoTen,
@@ -134,11 +159,17 @@ exports.importExcel = async (req, res) => {
             trangThai:
               user.trangThai === "Hoạt động" ? "Đang làm" : "Nghỉ việc",
           });
-        } else if (user) {
-          errors.push(
-            `Dòng ${i + 2}: MSNV ${msnv} đang là tài khoản ${user.quyen}, chưa có hồ sơ tài xế.`
+          drivers.push(driver);
+        } else {
+          const otherUser = driverUsers.find((item) =>
+            driverMatchesMsnv({ msnv: item.msnv }, msnv)
           );
-          continue;
+          if (otherUser) {
+            errors.push(
+              `Dòng ${i + 2}: MSNV ${msnv} đang là tài khoản ${otherUser.quyen}, chưa có hồ sơ tài xế.`
+            );
+            continue;
+          }
         }
       }
 
@@ -149,39 +180,28 @@ exports.importExcel = async (req, res) => {
         continue;
       }
 
-      // Trong cùng 1 ngày, 1 xe chỉ được phân công 1 lần
-      // (không phân biệt Ca) - đồng bộ rule với createAssignment
-      const existedVehicle = await Assignment.findOne({
-        where: {
-          ngay,
-          vehicleId: vehicle.id,
-        },
-      });
+      const dayKey = String(ngay).slice(0, 10);
+      const vehicleKey = `${dayKey}|${vehicle.id}`;
+      const driverKey = `${dayKey}|${driver.id}`;
 
-      if (existedVehicle) {
+      if (takenVehicle.has(vehicleKey)) {
         errors.push(
           `Dòng ${i + 2}: Xe ${row["Biển số"]} đã được phân công trong ngày này`
         );
         continue;
       }
 
-      // Trong cùng 1 ngày, 1 tài xế chỉ được phân công 1 lần
-      // (không phân biệt Ca) - đồng bộ rule với createAssignment
-      const existedDriver = await Assignment.findOne({
-        where: {
-          ngay,
-          driverId: driver.id,
-        },
-      });
-
-      if (existedDriver) {
+      if (takenDriver.has(driverKey)) {
         errors.push(
           `Dòng ${i + 2}: Tài xế ${row["MSNV"]} đã được phân công trong ngày này`
         );
         continue;
       }
 
-      await Assignment.create({
+      takenVehicle.add(vehicleKey);
+      takenDriver.add(driverKey);
+
+      toCreate.push({
         ngay,
         ca,
         kho,
@@ -191,6 +211,10 @@ exports.importExcel = async (req, res) => {
       });
 
       success++;
+    }
+
+    if (toCreate.length) {
+      await Assignment.bulkCreate(toCreate);
     }
 
     res.json({

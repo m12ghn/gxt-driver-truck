@@ -10,10 +10,12 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (!err.response && (err.code === "ECONNABORTED" || /timeout/i.test(err.message || ""))) {
+      const url = String(err.config?.url || "");
       err.response = {
         data: {
-          message:
-            "Không kết nối được database (hết thời gian chờ). Kiểm tra Supabase còn chạy rồi bấm Thử lại.",
+          message: url.includes("/upload/excel")
+            ? "Import Excel quá lâu. Đợi Vercel deploy xong rồi thử lại, hoặc chia nhỏ file."
+            : "Máy chủ phản hồi quá chậm. Thử lại sau vài giây.",
         },
       };
     }
