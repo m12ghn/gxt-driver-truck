@@ -474,7 +474,7 @@ export default function Assignment() {
 
           <TextField
             size="small"
-            label="Tìm BSX / MSNV / Tên / SĐT"
+            label="Tìm BSX / Loại xe / MSNV / Tên / SĐT"
             value={search}
             onChange={(e) =>
               setSearch(e.target.value)
