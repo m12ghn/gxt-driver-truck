@@ -6,6 +6,13 @@ export const SHIFT_SCHEDULE = {
   "Ca 2": { start: "07:30", end: "19:30" },
 };
 
+// Ngày hôm nay theo giờ Việt Nam (UTC+7) — dùng thay cho
+// new Date().toISOString().split("T")[0] vì cách đó lấy theo giờ UTC,
+// sai lệch ngày trong khoảng 00:00-06:59 giờ Việt Nam.
+export function vietnamToday() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+}
+
 function formatDuration(minutes) {
   if (minutes < 60) return `${minutes} phút`;
 
