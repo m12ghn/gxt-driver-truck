@@ -8,14 +8,7 @@ require("dotenv").config();
 //   "Error: Please install pg package manually"
 require("pg");
 
-const dns = require("dns");
 const { Sequelize } = require("sequelize");
-
-try {
-  dns.setDefaultResultOrder("ipv4first");
-} catch {
-  // Node cũ không có API này
-}
 
 // Vercel spins up many short-lived instances. Each instance used to open
 // Sequelize's default pool (5 connections) against Supabase session mode
