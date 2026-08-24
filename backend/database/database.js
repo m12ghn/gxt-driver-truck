@@ -1,19 +1,16 @@
 require("dotenv").config();
 
-// pg is required by Sequelize's postgres dialect, but Sequelize loads it
-// dynamically (require(variableName) instead of require("pg")). Vercel's
-// serverless bundler only packages dependencies it can see via a static
-// require(), so without this explicit line, "pg" gets left out of the
-// deployed function and the app crashes at startup with:
-//   "Error: Please install pg package manually"
 require("pg");
 
+const dns = require("dns");
 const { Sequelize } = require("sequelize");
 
-// Vercel spins up many short-lived instances. Each instance used to open
-// Sequelize's default pool (5 connections) against Supabase session mode
-// (cap 15) → EMAXCONNSESSION. Use a tiny pool, and on serverless prefer
-// the Transaction pooler (port 6543) which multiplexes clients.
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // Node cũ không có API này
+}
+
 function resolveDatabaseUrl(raw) {
   if (!raw) return raw;
 
@@ -24,6 +21,11 @@ function resolveDatabaseUrl(raw) {
 
     if (isServerless && isSupabasePooler && (url.port === "5432" || url.port === "")) {
       url.port = "6543";
+    }
+
+    if (isServerless && isSupabasePooler && url.port === "6543") {
+      url.searchParams.set("pgbouncer", "true");
+      url.searchParams.set("sslmode", "require");
     }
 
     return url.toString();
@@ -43,11 +45,13 @@ const sequelize = new Sequelize(resolveDatabaseUrl(process.env.DATABASE_URL), {
       require: true,
       rejectUnauthorized: false,
     },
+    keepAlive: true,
+    family: 4,
   },
   pool: {
     max: isServerless ? 1 : 5,
     min: 0,
-    acquire: 30000,
+    acquire: isServerless ? 8000 : 30000,
     idle: isServerless ? 5000 : 10000,
     evict: isServerless ? 5000 : 10000,
   },

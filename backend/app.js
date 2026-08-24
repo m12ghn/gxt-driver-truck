@@ -70,6 +70,9 @@ function publicDbError(err) {
   if (/EMAXCONNSESSION|max clients reached|too many clients/i.test(msg)) {
     return "Hệ thống đang bận, vui lòng đợi 5 giây rồi gửi lại.";
   }
+  if (/nxdomain|ENOTFOUND|getaddrinfo|timeout|ECONNREFUSED|ECONNRESET/i.test(msg)) {
+    return "Không kết nối được database. Kiểm tra Supabase còn chạy (không bị Pause) rồi tải lại trang.";
+  }
   return "Database connection error";
 }
 
@@ -101,15 +104,21 @@ function kickWarmup() {
     });
 }
 
+function scheduleWarmup(res) {
+  res.once("finish", () => {
+    setImmediate(kickWarmup);
+  });
+}
+
 app.use(async (req, res, next) => {
   if (skipDatabase(req) || isSuperAdminLogin(req)) {
-    kickWarmup();
+    scheduleWarmup(res);
     return next();
   }
 
   try {
     await ensureConnected();
-    kickWarmup();
+    scheduleWarmup(res);
     next();
   } catch (err) {
     console.error("❌ Database Error:", err);

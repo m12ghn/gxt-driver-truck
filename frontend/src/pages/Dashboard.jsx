@@ -159,6 +159,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState(null);
   const [expandedKho, setExpandedKho] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     loadAll(true);
@@ -174,13 +175,25 @@ export default function Dashboard() {
     try {
       const statsRes = await getDashboardStats();
       setStats(statsRes.data.data);
+      setLoadError("");
       setLoading(false);
 
-      const alertsRes = await getAlerts();
-      setAlerts(alertsRes.data.data || { counts: {}, items: [] });
+      try {
+        const alertsRes = await getAlerts();
+        setAlerts(alertsRes.data.data || { counts: {}, items: [] });
+      } catch (alertErr) {
+        console.error(alertErr);
+      }
       setRefreshedAt(new Date());
     } catch (err) {
       console.error(err);
+      const timedOut = err.code === "ECONNABORTED";
+      setLoadError(
+        err.response?.data?.message ||
+          (timedOut
+            ? "Dashboard tải quá lâu. Thử lại sau vài giây."
+            : "Không tải được số liệu Dashboard.")
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -197,9 +210,14 @@ export default function Dashboard() {
 
   if (!stats) {
     return (
-      <Typography color="error">
-        Không tải được số liệu Dashboard.
-      </Typography>
+      <Box mt={2}>
+        <Typography color="error" mb={2}>
+          {loadError || "Không tải được số liệu Dashboard."}
+        </Typography>
+        <Button variant="contained" onClick={() => loadAll(true)}>
+          Thử lại
+        </Button>
+      </Box>
     );
   }
 

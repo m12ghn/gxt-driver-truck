@@ -126,6 +126,7 @@ exports.getDashboardStats = async (req, res) => {
     const assignments = await Assignment.findAll({
       where,
       attributes: ASSIGNMENT_STATS_ATTRS,
+      raw: true,
     });
     const vehicles = await Vehicle.findAll({
       where: resourceWhere,

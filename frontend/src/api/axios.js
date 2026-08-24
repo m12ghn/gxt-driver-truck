@@ -2,7 +2,10 @@ import axios from "axios";
 import { parseKhoList } from "../constants/warehouses";
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: import.meta.env.PROD
+    ? "https://gxt-driver-truck-git-main-m12ghn-9152s-projects.vercel.app/api"
+    : "/api",
+  timeout: 25000,
 });
 
 api.interceptors.request.use((config) => {
