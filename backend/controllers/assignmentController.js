@@ -153,8 +153,6 @@ exports.getTodayAssignment = async (req, res) => {
 exports.getTodayAssignments = async (req, res) => {
   try {
 
-    kickOverdueMark();
-
     const today = vietnamToday();
 
     const where = applyWarehouseScope(req, { ngay: today });
@@ -173,6 +171,8 @@ exports.getTodayAssignments = async (req, res) => {
       data: assignments,
     });
 
+    kickOverdueMark();
+
   } catch (err) {
 
     res.status(500).json({
@@ -190,8 +190,6 @@ exports.getTodayAssignments = async (req, res) => {
 // ==============================
 exports.getAssignments = async (req, res) => {
   try {
-
-    kickOverdueMark();
 
     const today = vietnamToday();
 
@@ -225,6 +223,8 @@ exports.getAssignments = async (req, res) => {
       success: true,
       data: assignments,
     });
+
+    kickOverdueMark();
 
   } catch (err) {
 

@@ -145,11 +145,17 @@ export default function Assignment() {
       const res =
         await getAssignments(fromDate, toDate);
 
-      setAssignments(res.data.data);
+      setAssignments(res.data?.data || []);
 
     } catch (err) {
 
       console.error(err);
+
+      setAssignments([]);
+      alert(
+        err.response?.data?.message ||
+          "Không tải được danh sách phân công."
+      );
 
     } finally {
 
