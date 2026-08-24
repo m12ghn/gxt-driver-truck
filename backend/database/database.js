@@ -50,7 +50,7 @@ const sequelize = new Sequelize(resolveDatabaseUrl(process.env.DATABASE_URL), {
   pool: {
     max: isServerless ? 1 : 5,
     min: 0,
-    acquire: isServerless ? 8000 : 30000,
+    acquire: 30000,
     idle: isServerless ? 5000 : 10000,
     evict: isServerless ? 5000 : 10000,
   },
