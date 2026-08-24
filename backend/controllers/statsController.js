@@ -24,6 +24,8 @@ const ASSIGNMENT_STATS_ATTRS = [
   "ca",
   "kho",
   "trangThai",
+  "vehicleId",
+  "driverId",
   "checkInTime",
   "checkOutTime",
   "checkInGpsValid",
@@ -33,6 +35,20 @@ const ASSIGNMENT_STATS_ATTRS = [
 
 const DRIVER_MIN_ATTRS = ["id", "msnv", "hoTen"];
 const VEHICLE_MIN_ATTRS = ["id", "bienSo"];
+
+function assignmentDateKey(value) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+  }
+  return String(value).slice(0, 10);
+}
+
+function kickOverdueMark() {
+  markOverdueAssignments().catch((err) =>
+    console.error("markOverdueAssignments:", err.message)
+  );
+}
 
 function vnDateStr(date = new Date()) {
   return date.toLocaleDateString("en-CA", {
@@ -91,10 +107,6 @@ function summarize(assignments) {
 // ==============================
 exports.getDashboardStats = async (req, res) => {
   try {
-    markOverdueAssignments().catch((err) =>
-      console.error("markOverdueAssignments:", err.message)
-    );
-
     const todayStr = vietnamToday();
     const today = new Date(`${todayStr}T12:00:00+07:00`);
 
@@ -111,23 +123,21 @@ exports.getDashboardStats = async (req, res) => {
       ? { kho: warehouseKhoFilter(scopedKho) }
       : {};
 
-    const [assignments, vehicles, drivers] = await Promise.all([
-      Assignment.findAll({
-        where,
-        attributes: ASSIGNMENT_STATS_ATTRS,
-      }),
-      Vehicle.findAll({
-        where: resourceWhere,
-        attributes: ["trangThai"],
-      }),
-      Driver.findAll({
-        where: resourceWhere,
-        attributes: ["trangThai"],
-      }),
-    ]);
+    const assignments = await Assignment.findAll({
+      where,
+      attributes: ASSIGNMENT_STATS_ATTRS,
+    });
+    const vehicles = await Vehicle.findAll({
+      where: resourceWhere,
+      attributes: ["trangThai"],
+    });
+    const drivers = await Driver.findAll({
+      where: resourceWhere,
+      attributes: ["trangThai"],
+    });
 
     const todayAssignments = assignments.filter(
-      (item) => item.ngay === todayStr
+      (item) => assignmentDateKey(item.ngay) === todayStr
     );
 
     const todaySummary = summarize(todayAssignments);
@@ -140,7 +150,7 @@ exports.getDashboardStats = async (req, res) => {
       const dStr = vnDateStr(d);
 
       const dayAssignments = assignments.filter(
-        (item) => item.ngay === dStr
+        (item) => assignmentDateKey(item.ngay) === dStr
       );
 
       const daySummary = summarize(dayAssignments);
@@ -174,6 +184,7 @@ exports.getDashboardStats = async (req, res) => {
         khoList: parseKhoList(scopedKho),
       },
     });
+    kickOverdueMark();
   } catch (err) {
     console.error(err);
 
@@ -191,10 +202,6 @@ exports.getDashboardStats = async (req, res) => {
 // ==============================
 exports.getAlerts = async (req, res) => {
   try {
-    markOverdueAssignments().catch((err) =>
-      console.error("markOverdueAssignments:", err.message)
-    );
-
     const todayStr = vietnamToday();
 
     const includeMin = [
@@ -202,22 +209,20 @@ exports.getAlerts = async (req, res) => {
       { model: Driver, attributes: DRIVER_MIN_ATTRS },
     ];
 
-    const [todayAssignments, pendingWarehouse] = await Promise.all([
-      Assignment.findAll({
-        where: applyWarehouseScope(req, { ngay: todayStr }),
-        attributes: ASSIGNMENT_STATS_ATTRS,
-        include: includeMin,
-        order: [["updatedAt", "DESC"]],
+    const todayAssignments = await Assignment.findAll({
+      where: applyWarehouseScope(req, { ngay: todayStr }),
+      attributes: ASSIGNMENT_STATS_ATTRS,
+      include: includeMin,
+      order: [["updatedAt", "DESC"]],
+    });
+    const pendingWarehouse = await Assignment.findAll({
+      where: applyWarehouseScope(req, {
+        warehouseStatus: "Chờ xác nhận",
       }),
-      Assignment.findAll({
-        where: applyWarehouseScope(req, {
-          warehouseStatus: "Chờ xác nhận",
-        }),
-        attributes: ASSIGNMENT_STATS_ATTRS,
-        include: includeMin,
-        order: [["checkOutTime", "DESC"]],
-      }),
-    ]);
+      attributes: ASSIGNMENT_STATS_ATTRS,
+      include: includeMin,
+      order: [["checkOutTime", "DESC"]],
+    });
 
     const items = [];
 
@@ -381,6 +386,7 @@ exports.getAlerts = async (req, res) => {
         refreshedAt: new Date().toISOString(),
       },
     });
+    kickOverdueMark();
   } catch (err) {
     console.error(err);
 
