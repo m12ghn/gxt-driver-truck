@@ -26,7 +26,6 @@ const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 const {
   withReadablePhotos,
-  withReadablePhotosList,
 } = require("../utils/uploadToSupabase");
 
 function denyIfOutOfScope(req, res, assignment) {
@@ -40,6 +39,22 @@ function denyIfOutOfScope(req, res, assignment) {
     });
     return true;
   }
+}
+
+const LIST_VEHICLE_ATTRS = ["id", "bienSo", "loaiXe", "trangThai"];
+const LIST_DRIVER_ATTRS = ["id", "msnv", "hoTen", "soDienThoai", "trangThai"];
+
+function assignmentListIncludes() {
+  return [
+    { model: Vehicle, attributes: LIST_VEHICLE_ATTRS },
+    { model: Driver, attributes: LIST_DRIVER_ATTRS },
+  ];
+}
+
+function kickOverdueMark() {
+  markOverdueAssignments().catch((err) =>
+    console.error("markOverdueAssignments:", err.message)
+  );
 }
 
 // ==============================
@@ -138,7 +153,7 @@ exports.getTodayAssignment = async (req, res) => {
 exports.getTodayAssignments = async (req, res) => {
   try {
 
-    await markOverdueAssignments();
+    kickOverdueMark();
 
     const today = vietnamToday();
 
@@ -146,7 +161,7 @@ exports.getTodayAssignments = async (req, res) => {
 
     const assignments = await Assignment.findAll({
       where,
-      include: [Vehicle, Driver],
+      include: assignmentListIncludes(),
       order: [
         ["ca", "ASC"],
         ["kho", "ASC"],
@@ -155,7 +170,7 @@ exports.getTodayAssignments = async (req, res) => {
 
     res.json({
       success: true,
-      data: await withReadablePhotosList(assignments),
+      data: assignments,
     });
 
   } catch (err) {
@@ -176,7 +191,7 @@ exports.getTodayAssignments = async (req, res) => {
 exports.getAssignments = async (req, res) => {
   try {
 
-    await markOverdueAssignments();
+    kickOverdueMark();
 
     const today = vietnamToday();
 
@@ -198,11 +213,7 @@ exports.getAssignments = async (req, res) => {
 
     const assignments = await Assignment.findAll({
       where,
-      include: [
-        Vehicle,
-        Driver,
-        { model: IncidentReport, as: "incidents" },
-      ],
+      include: assignmentListIncludes(),
       order: [
         ["ngay", "ASC"],
         ["ca", "ASC"],
@@ -212,7 +223,7 @@ exports.getAssignments = async (req, res) => {
 
     res.json({
       success: true,
-      data: await withReadablePhotosList(assignments),
+      data: assignments,
     });
 
   } catch (err) {
