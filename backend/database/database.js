@@ -25,7 +25,6 @@ function resolveDatabaseUrl(raw) {
 
     if (isServerless && isSupabasePooler && url.port === "6543") {
       url.searchParams.set("pgbouncer", "true");
-      url.searchParams.set("sslmode", "require");
     }
 
     return url.toString();
