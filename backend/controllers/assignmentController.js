@@ -261,6 +261,7 @@ exports.exportExcel = async (req, res) => {
       "Ca": item.ca,
       "Kho": item.kho,
       "Biển số": item.Vehicle?.bienSo || "",
+      "Loại xe": item.Vehicle?.loaiXe || "",
       "MSNV": item.Driver?.msnv || "",
       "Họ tên": item.Driver?.hoTen || "",
       "SĐT": item.Driver?.soDienThoai || "",

@@ -338,6 +338,7 @@ export default function Assignment() {
 
     const matchSearch =
       item.Vehicle?.bienSo?.toLowerCase().includes(keyword) ||
+      item.Vehicle?.loaiXe?.toLowerCase().includes(keyword) ||
       item.Driver?.msnv?.toLowerCase().includes(keyword) ||
       item.Driver?.hoTen?.toLowerCase().includes(keyword) ||
       item.Driver?.soDienThoai?.toLowerCase().includes(keyword);
@@ -636,7 +637,7 @@ export default function Assignment() {
             WebkitOverflowScrolling: "touch",
           }}
         >
-        <Table size="small" sx={{ minWidth: 1400 }}>
+        <Table size="small" sx={{ minWidth: 1500 }}>
 
           <TableHead>
 
@@ -646,6 +647,7 @@ export default function Assignment() {
               <TableCell sx={{ whiteSpace: "nowrap" }}>Ca</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Kho</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Biển số</TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>Loại xe</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>MSNV</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Họ tên</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>SĐT</TableCell>
@@ -682,6 +684,10 @@ export default function Assignment() {
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
       {item.Vehicle?.bienSo}
+    </TableCell>
+
+    <TableCell sx={{ whiteSpace: "nowrap" }}>
+      {item.Vehicle?.loaiXe || "--"}
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
