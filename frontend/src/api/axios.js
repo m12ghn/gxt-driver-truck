@@ -2,11 +2,24 @@ import axios from "axios";
 import { parseKhoList } from "../constants/warehouses";
 
 const api = axios.create({
-  baseURL: import.meta.env.PROD
-    ? "https://gxt-driver-truck-git-main-m12ghn-9152s-projects.vercel.app/api"
-    : "/api",
-  timeout: 25000,
+  baseURL: "/api",
+  timeout: 20000,
 });
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (!err.response && (err.code === "ECONNABORTED" || /timeout/i.test(err.message || ""))) {
+      err.response = {
+        data: {
+          message:
+            "Không kết nối được database (hết thời gian chờ). Kiểm tra Supabase còn chạy rồi bấm Thử lại.",
+        },
+      };
+    }
+    return Promise.reject(err);
+  }
+);
 
 api.interceptors.request.use((config) => {
   try {

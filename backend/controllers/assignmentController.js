@@ -230,7 +230,9 @@ exports.getAssignments = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: /nxdomain|ENOTFOUND|timeout|ECONNREFUSED/i.test(err.message || "")
+        ? "Không kết nối được database. Kiểm tra Supabase còn chạy (không bị Pause) rồi tải lại trang."
+        : err.message,
     });
 
   }

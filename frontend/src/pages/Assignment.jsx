@@ -80,6 +80,8 @@ export default function Assignment() {
   const [loading, setLoading] =
     useState(true);
 
+  const [loadError, setLoadError] = useState("");
+
   const [openDialog, setOpenDialog] =
     useState(false);
 
@@ -139,30 +141,22 @@ export default function Assignment() {
   }, [fromDate, toDate]);
 
   async function loadAssignments() {
+    setLoading(true);
+    setLoadError("");
 
     try {
-
-      const res =
-        await getAssignments(fromDate, toDate);
-
+      const res = await getAssignments(fromDate, toDate);
       setAssignments(res.data?.data || []);
-
     } catch (err) {
-
       console.error(err);
-
       setAssignments([]);
-      alert(
+      setLoadError(
         err.response?.data?.message ||
           "Không tải được danh sách phân công."
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
   async function handleExportExcel() {
@@ -327,7 +321,24 @@ export default function Assignment() {
   }
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Box display="flex" justifyContent="center" mt={6}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Box mt={2}>
+        <Typography color="error" mb={2}>
+          {loadError}
+        </Typography>
+        <Button variant="contained" onClick={loadAssignments}>
+          Thử lại
+        </Button>
+      </Box>
+    );
   }
 
   const khoOptions = [
