@@ -17,6 +17,24 @@ async function ensureAssignmentColumns() {
     console.log("✅ Added column Assignments.maChuyenDi");
   }
 
+  try {
+    await qi.addIndex("Assignments", ["ngay", "vehicleId"], {
+      unique: true,
+      name: "assignments_ngay_vehicle_unique",
+    });
+  } catch (err) {
+    console.warn("assignments_ngay_vehicle_unique:", err.message);
+  }
+
+  try {
+    await qi.addIndex("Assignments", ["ngay", "driverId"], {
+      unique: true,
+      name: "assignments_ngay_driver_unique",
+    });
+  } catch (err) {
+    console.warn("assignments_ngay_driver_unique:", err.message);
+  }
+
   ensured = true;
 }
 

@@ -10,6 +10,7 @@ const {
   normalizeMsnv,
   driverMatchesMsnv,
   parseNgay,
+  assignmentDateText,
 } = require("../utils/assignmentHelpers");
 const {
   uploadBufferToSupabase,
@@ -99,10 +100,14 @@ exports.importExcel = async (req, res) => {
       : [];
 
     const takenVehicle = new Set(
-      existing.map((item) => `${String(item.ngay).slice(0, 10)}|${item.vehicleId}`)
+      existing.map(
+        (item) => `${assignmentDateText(item.ngay)}|${item.vehicleId}`
+      )
     );
     const takenDriver = new Set(
-      existing.map((item) => `${String(item.ngay).slice(0, 10)}|${item.driverId}`)
+      existing.map(
+        (item) => `${assignmentDateText(item.ngay)}|${item.driverId}`
+      )
     );
 
     let success = 0;
@@ -180,7 +185,7 @@ exports.importExcel = async (req, res) => {
         continue;
       }
 
-      const dayKey = String(ngay).slice(0, 10);
+      const dayKey = assignmentDateText(ngay);
       const vehicleKey = `${dayKey}|${vehicle.id}`;
       const driverKey = `${dayKey}|${driver.id}`;
 
