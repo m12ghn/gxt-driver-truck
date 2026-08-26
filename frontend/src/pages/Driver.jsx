@@ -23,12 +23,14 @@ import {
   Button,
   Stack,
   Chip,
+  TextField,
 } from "@mui/material";
 
 export default function Driver() {
 
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
@@ -151,6 +153,20 @@ export default function Driver() {
     return <CircularProgress />;
   }
 
+  const keyword = search.trim().toLowerCase();
+  const filteredDrivers = drivers.filter((driver) => {
+    if (!keyword) return true;
+    return [
+      driver.msnv,
+      driver.hoTen,
+      driver.soDienThoai,
+      driver.kho,
+      driver.bangLai,
+      driver.loaiBang,
+      driver.trangThai,
+    ].some((value) => String(value || "").toLowerCase().includes(keyword));
+  });
+
   return (
 
     <Box>
@@ -194,6 +210,14 @@ export default function Driver() {
 
       </Stack>
 
+      <TextField
+        size="small"
+        label="Tìm MSNV / họ tên / SĐT / kho"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ width: 360, mb: 2 }}
+      />
+
       <Paper>
 
         <Table>
@@ -226,7 +250,14 @@ export default function Driver() {
 
           <TableBody>
 
-            {drivers.map((driver) => (
+            {filteredDrivers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  {keyword ? "Không tìm thấy tài xế phù hợp." : "Chưa có tài xế."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredDrivers.map((driver) => (
 
               <TableRow key={driver.id}>
 
@@ -301,7 +332,8 @@ export default function Driver() {
 
               </TableRow>
 
-            ))}
+            ))
+            )}
 
           </TableBody>
 

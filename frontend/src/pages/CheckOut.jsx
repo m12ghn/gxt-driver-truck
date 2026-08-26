@@ -40,6 +40,7 @@ export default function CheckOut() {
 
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   // Dialog Check Out
   const [openCheckOut, setOpenCheckOut] = useState(false);
@@ -84,6 +85,21 @@ export default function CheckOut() {
     return <CircularProgress />;
   }
 
+  const keyword = search.trim().toLowerCase();
+  const filteredAssignments = assignments.filter((item) => {
+    if (!keyword) return true;
+    return [
+      item.ca,
+      item.kho,
+      item.trangThai,
+      item.Vehicle?.bienSo,
+      item.Vehicle?.loaiXe,
+      item.Driver?.msnv,
+      item.Driver?.hoTen,
+      item.Driver?.soDienThoai,
+    ].some((value) => String(value || "").toLowerCase().includes(keyword));
+  });
+
   return (
     <Box>
 
@@ -116,8 +132,19 @@ export default function CheckOut() {
             onChange={(e) => setToDate(e.target.value)}
           />
 
+          <TextField
+            size="small"
+            label="Tìm BSX / MSNV / tên / kho"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ width: 280 }}
+          />
+
           <Typography variant="body2" color="text.secondary">
-            Tổng chuyến: {assignments.length}
+            Tổng chuyến: {filteredAssignments.length}
+            {filteredAssignments.length !== assignments.length
+              ? ` / ${assignments.length}`
+              : ""}
             {fromDate === toDate
               ? ` (${formatDate(fromDate)})`
               : ` (${formatDate(fromDate)} – ${formatDate(toDate)})`}
@@ -151,7 +178,14 @@ export default function CheckOut() {
 
           <TableBody>
 
-            {assignments.map((item) => (
+            {filteredAssignments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} align="center">
+                  {keyword ? "Không tìm thấy chuyến phù hợp." : "Không có chuyến."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredAssignments.map((item) => (
 
               <TableRow key={item.id} hover>
 
@@ -290,7 +324,8 @@ export default function CheckOut() {
 
               </TableRow>
 
-            ))}
+            ))
+            )}
 
           </TableBody>
 

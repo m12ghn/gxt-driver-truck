@@ -20,11 +20,13 @@ import {
   CircularProgress,
   Button,
   Stack,
+  TextField,
 } from "@mui/material";
 
 export default function Vehicle() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
@@ -124,6 +126,19 @@ export default function Vehicle() {
     return <CircularProgress />;
   }
 
+  const keyword = search.trim().toLowerCase();
+  const filteredVehicles = vehicles.filter((vehicle) => {
+    if (!keyword) return true;
+    return [
+      vehicle.bienSo,
+      vehicle.loaiXe,
+      vehicle.kho,
+      vehicle.trangThai,
+      vehicle.ghiChu,
+      vehicle.kmHienTai,
+    ].some((value) => String(value || "").toLowerCase().includes(keyword));
+  });
+
   return (
     <Box>
       <Stack
@@ -155,6 +170,14 @@ export default function Vehicle() {
         </Stack>
       </Stack>
 
+      <TextField
+        size="small"
+        label="Tìm biển số / loại xe / kho / trạng thái"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ width: 360, mb: 2 }}
+      />
+
       <Paper>
         <Table>
           <TableHead>
@@ -171,7 +194,14 @@ export default function Vehicle() {
           </TableHead>
 
           <TableBody>
-            {vehicles.map((vehicle) => (
+            {filteredVehicles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  {keyword ? "Không tìm thấy xe phù hợp." : "Chưa có xe."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredVehicles.map((vehicle) => (
               <TableRow key={vehicle.id}>
                 <TableCell>{vehicle.id}</TableCell>
                 <TableCell>{vehicle.bienSo}</TableCell>
@@ -194,7 +224,8 @@ export default function Vehicle() {
                   </Button>
                 </TableCell>
               </TableRow>
-            ))}
+              ))
+            )}
           </TableBody>
         </Table>
       </Paper>
