@@ -8,10 +8,11 @@ const IncidentReport = require("../models/IncidentReport");
 
 const {
   vietnamToday,
+  formatVietnamDate,
   formatVietnamDateTime,
-  assignmentDays,
   assignmentDateText,
   parseNgay,
+  assignmentDays,
   findDriversByMsnv,
   markOverdueAssignments,
   findUnfinishedAssignment,
@@ -270,7 +271,7 @@ exports.exportExcel = async (req, res) => {
     });
 
     const rows = assignments.map((item) => ({
-      "Ngày": item.ngay,
+      "Ngày": formatVietnamDate(item.ngay),
       "Ca": item.ca,
       "Kho": item.kho,
       "Biển số": item.Vehicle?.bienSo || "",
@@ -291,16 +292,17 @@ exports.exportExcel = async (req, res) => {
       ? XLSX.utils.decode_range(worksheet["!ref"])
       : null;
     if (range) {
-      const timeHeaders = new Set([
+      const dateAndTimeHeaders = new Set([
+        "Ngày",
         "Check In - Thời gian",
         "Check Out - Thời gian",
       ]);
-      const timeCols = [];
+      const textCols = [];
       for (let col = range.s.c; col <= range.e.c; col += 1) {
         const header = worksheet[XLSX.utils.encode_cell({ r: 0, c: col })];
-        if (header && timeHeaders.has(String(header.v))) timeCols.push(col);
+        if (header && dateAndTimeHeaders.has(String(header.v))) textCols.push(col);
       }
-      for (const col of timeCols) {
+      for (const col of textCols) {
         for (let row = 1; row <= range.e.r; row += 1) {
           const addr = XLSX.utils.encode_cell({ r: row, c: col });
           const cell = worksheet[addr];
