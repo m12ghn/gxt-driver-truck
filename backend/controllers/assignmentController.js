@@ -24,6 +24,7 @@ const {
   assertWarehouseKhoChoice,
 } = require("../utils/scopeHelpers");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
+const { getShiftPayroll } = require("../utils/shiftHelpers");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 const {
   withReadablePhotos,
@@ -270,9 +271,17 @@ exports.exportExcel = async (req, res) => {
       ],
     });
 
-    const rows = assignments.map((item) => ({
+    const rows = assignments.map((item) => {
+      const payroll = getShiftPayroll(item.ca);
+
+      return {
       "Ngày": formatVietnamDate(item.ngay),
       "Ca": item.ca,
+      "Thời gian check in": payroll.checkIn,
+      "Thời gian check out": payroll.checkOut,
+      "Ca làm việc": payroll.caLamViec,
+      "Loại": payroll.loai,
+      "Lương": payroll.luong,
       "Kho": item.kho,
       "Biển số": item.Vehicle?.bienSo || "",
       "Loại xe": item.Vehicle?.loaiXe || "",
@@ -285,7 +294,8 @@ exports.exportExcel = async (req, res) => {
       "Check Out - ODO": item.odoCheckOut ?? "",
       "User xác nhận": item.warehouseConfirmBy || "",
       "Mã chuyến đi": item.maChuyenDi || "",
-    }));
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const range = worksheet["!ref"]
@@ -294,6 +304,9 @@ exports.exportExcel = async (req, res) => {
     if (range) {
       const dateAndTimeHeaders = new Set([
         "Ngày",
+        "Thời gian check in",
+        "Thời gian check out",
+        "Ca làm việc",
         "Check In - Thời gian",
         "Check Out - Thời gian",
       ]);
