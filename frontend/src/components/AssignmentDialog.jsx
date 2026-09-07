@@ -18,6 +18,7 @@ import {
   Grid,
   TextField,
   MenuItem,
+  Autocomplete,
 } from "@mui/material";
 
 export default function AssignmentDialog({
@@ -160,6 +161,19 @@ export default function AssignmentDialog({
     onClose();
   }
 
+  const vehicleOptions = vehicles.filter(
+    (v) =>
+      v.trangThai === "Hoạt động" || Number(v.id) === Number(vehicleId)
+  );
+  const driverOptions = drivers.filter(
+    (d) =>
+      d.trangThai === "Đang làm" || Number(d.id) === Number(driverId)
+  );
+  const selectedVehicle =
+    vehicleOptions.find((v) => Number(v.id) === Number(vehicleId)) || null;
+  const selectedDriver =
+    driverOptions.find((d) => Number(d.id) === Number(driverId)) || null;
+
   return (
     <Dialog
       open={open}
@@ -222,53 +236,63 @@ export default function AssignmentDialog({
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <TextField
-              select
-              label="Xe"
-              fullWidth
-              value={vehicleId}
-              onChange={(e) => setVehicleId(e.target.value)}
-            >
-              {vehicles
-                .filter(
-                  (v) =>
-                    v.trangThai === "Hoạt động" ||
-                    Number(v.id) === Number(vehicleId)
-                )
-                .map((vehicle) => (
-                  <MenuItem
-                    key={vehicle.id}
-                    value={vehicle.id}
-                  >
-                    {vehicle.bienSo} - {vehicle.loaiXe}
-                  </MenuItem>
-                ))}
-            </TextField>
+            <Autocomplete
+              options={vehicleOptions}
+              value={selectedVehicle}
+              onChange={(_, value) => setVehicleId(value?.id || "")}
+              getOptionLabel={(option) =>
+                `${option.bienSo || ""} - ${option.loaiXe || ""}`.trim()
+              }
+              isOptionEqualToValue={(a, b) => Number(a.id) === Number(b.id)}
+              filterOptions={(options, { inputValue }) => {
+                const keyword = inputValue.trim().toLowerCase();
+                if (!keyword) return options;
+                return options.filter((item) =>
+                  [item.bienSo, item.loaiXe, item.kho]
+                    .some((value) =>
+                      String(value || "").toLowerCase().includes(keyword)
+                    )
+                );
+              }}
+              noOptionsText="Không tìm thấy xe"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Xe"
+                  placeholder="Gõ biển số / loại xe"
+                />
+              )}
+            />
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <TextField
-              select
-              label="Tài xế"
-              fullWidth
-              value={driverId}
-              onChange={(e) => setDriverId(e.target.value)}
-            >
-              {drivers
-                .filter(
-                  (d) =>
-                    d.trangThai === "Đang làm" ||
-                    Number(d.id) === Number(driverId)
-                )
-                .map((driver) => (
-                  <MenuItem
-                    key={driver.id}
-                    value={driver.id}
-                  >
-                    {driver.msnv} - {driver.hoTen}
-                  </MenuItem>
-                ))}
-            </TextField>
+            <Autocomplete
+              options={driverOptions}
+              value={selectedDriver}
+              onChange={(_, value) => setDriverId(value?.id || "")}
+              getOptionLabel={(option) =>
+                `${option.msnv || ""} - ${option.hoTen || ""}`.trim()
+              }
+              isOptionEqualToValue={(a, b) => Number(a.id) === Number(b.id)}
+              filterOptions={(options, { inputValue }) => {
+                const keyword = inputValue.trim().toLowerCase();
+                if (!keyword) return options;
+                return options.filter((item) =>
+                  [item.msnv, item.hoTen, item.soDienThoai, item.kho]
+                    .some((value) =>
+                      String(value || "").toLowerCase().includes(keyword)
+                    )
+                );
+              }}
+              noOptionsText="Không tìm thấy tài xế"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Tài xế"
+                  placeholder="Gõ MSNV / họ tên / SĐT"
+                />
+              )}
+            />
           </Grid>
 
         </Grid>
