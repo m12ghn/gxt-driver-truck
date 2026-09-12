@@ -54,13 +54,16 @@ exports.importExcel = async (req, res) => {
       });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const workbook = XLSX.read(req.file.buffer, {
+      type: "buffer",
+      cellDates: true,
+    });
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
     const rows = XLSX.utils.sheet_to_json(sheet, {
-      raw: false,
-      dateNF: "dd/mm/yyyy",
+      raw: true,
+      defval: "",
     });
 
     const vehicles = await Vehicle.findAll({
@@ -89,7 +92,7 @@ exports.importExcel = async (req, res) => {
     const dates = [];
     for (const row of rows) {
       const ngay = parseNgay(cell(row, "Ngày", "Ngay", "Date"));
-      if (ngay) dates.push(ngay);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(ngay)) dates.push(ngay);
     }
 
     const existing = dates.length
@@ -119,7 +122,7 @@ exports.importExcel = async (req, res) => {
 
       const ngay = parseNgay(cell(row, "Ngày", "Ngay", "Date"));
 
-      if (!ngay) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(ngay)) {
         errors.push(`Dòng ${i + 2}: Ngày không hợp lệ.`);
         continue;
       }

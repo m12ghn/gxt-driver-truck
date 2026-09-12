@@ -63,24 +63,72 @@ function assignmentDateText(value) {
   return parseNgay(text);
 }
 
+function toIsoDate(year, month, day) {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) {
+    return "";
+  }
+  if (y < 2000 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return "";
+
+  const iso = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const check = new Date(`${iso}T12:00:00+07:00`);
+  if (Number.isNaN(check.getTime())) return "";
+
+  const vn = check.toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+  return vn === iso ? iso : "";
+}
+
 function parseNgay(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (value < 20000 || value > 80000) return "";
+    const utc = new Date(Date.UTC(1899, 11, 30) + Math.round(value) * 86400000);
+    if (Number.isNaN(utc.getTime())) return "";
+    return utc.toISOString().slice(0, 10);
+  }
+
   const raw = String(value ?? "")
     .replace(/\u00a0/g, " ")
     .trim();
-  if (!raw || raw === "undefined" || raw === "null") return "";
+  if (!raw || /^(undefined|null|invalid date)$/i.test(raw)) return "";
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return toIsoDate(...raw.split("-"));
 
-  const slash = raw.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+  const isoTime = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/);
+  if (isoTime) return toIsoDate(...isoTime[1].split("-"));
+
+  const slash = raw.match(
+    /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/
+  );
   if (slash) {
     let [, dd, mm, yyyy] = slash;
     if (yyyy.length === 2) {
       yyyy = Number(yyyy) > 50 ? `19${yyyy}` : `20${yyyy}`;
     }
-    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    return toIsoDate(yyyy, mm, dd);
   }
 
-  return raw;
+  // Excel hay hiện "13/09" (ẩn năm). Coi là ngày/tháng của năm hiện tại (VN).
+  const dayMonth = raw.match(/^(\d{1,2})[/\-.](\d{1,2})$/);
+  if (dayMonth) {
+    const year = vietnamToday().slice(0, 4);
+    return toIsoDate(year, dayMonth[2], dayMonth[1]);
+  }
+
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    return parseNgay(Number(raw));
+  }
+
+  return "";
 }
 
 function assignmentDays() {
