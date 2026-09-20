@@ -22,3 +22,7 @@ v1.0.0
 ## Product Owner
 
 Phạm Ngọc Huy
+
+## Hướng dẫn Admin
+
+Xem [HUONG-DAN-ADMIN.md](./HUONG-DAN-ADMIN.md) — thao tác thêm xe, tài xế, phân công, Check In/Out, import Excel.

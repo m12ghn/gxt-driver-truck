@@ -14,7 +14,7 @@ import {
   MenuItem,
 } from "@mui/material";
 
-const LOAI_XE_OPTIONS = ["Van", "1T9", "5T", "8T", "15T"];
+const LOAI_XE_OPTIONS = ["Van", "Van điện", "1T9", "5T", "8T", "15T"];
 
 const emptyForm = {
   bienSo: "",

@@ -39,6 +39,8 @@ function normalizeLoaiXe(value) {
 
   const map = {
     van: "Van",
+    "van điện": "Van điện",
+    "van dien": "Van điện",
     "1t9": "1T9",
     "1.9": "1T9",
     "5t": "5T",
