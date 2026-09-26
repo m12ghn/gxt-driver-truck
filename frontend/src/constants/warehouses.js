@@ -5,7 +5,7 @@ export const warehouses = [
   "Kho Giao Hàng Nặng - Thủ Đức - HCM",
   "Kho Chuyển Tiếp Sóng Thần-Bình Dương",
   "Kho Giao Hàng Nặng - Nhà Bè - HCM",
-  "Kho Trung Chuyển Hồ Chí Minh 01",
+  "Kho Giao Hàng Nặng - Hồ Chí Minh",
   "Kho Trung Chuyển Hồ Chí Minh 20",
 ];
 
@@ -16,6 +16,7 @@ const SHORT_BY_OFFICIAL = {
   "Kho Giao Hàng Nặng - Thủ Đức - HCM": "Thủ Đức",
   "Kho Giao Hàng Nặng - Nhà Bè - HCM": "Nhà Bè",
   "Kho Chuyển Tiếp Sóng Thần-Bình Dương": "Sóng Thần",
+  "Kho Giao Hàng Nặng - Hồ Chí Minh": "Xuyên Á",
   "Kho Trung Chuyển Hồ Chí Minh 01": "Xuyên Á",
   "Kho Trung Chuyển Hồ Chí Minh 20": "HCM 20",
 };

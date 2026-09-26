@@ -6,6 +6,7 @@ const {
 } = require("./ensureWarehouses");
 
 const EXTRA_OFFICIAL_KHO = [
+  "Kho Giao Hàng Nặng - Hồ Chí Minh",
   "Kho Trung Chuyển Hồ Chí Minh 01",
   "Kho Trung Chuyển Hồ Chí Minh 20",
 ];

@@ -1,5 +1,10 @@
 const Warehouse = require("../models/Warehouse");
+const sequelize = require("../database/database");
 const { DEFAULT_WAREHOUSES } = require("../constants/warehouses");
+
+const KHO_RENAMES = {
+  "Kho Trung Chuyển Hồ Chí Minh 01": "Kho Giao Hàng Nặng - Hồ Chí Minh",
+};
 
 // Phân công dùng tên ngắn ("Tân Bình"), DB đã có kho GHN đầy đủ tên + GPS thật.
 const SHORT_TO_OFFICIAL = {
@@ -9,13 +14,44 @@ const SHORT_TO_OFFICIAL = {
   "Thủ Đức": "Kho Giao Hàng Nặng - Thủ Đức - HCM",
   "Nhà Bè": "Kho Giao Hàng Nặng - Nhà Bè - HCM",
   "Sóng Thần": "Kho Chuyển Tiếp Sóng Thần-Bình Dương",
-  "Xuyên Á": "Kho Trung Chuyển Hồ Chí Minh 01",
+  "Xuyên Á": "Kho Giao Hàng Nặng - Hồ Chí Minh",
 };
 
 let ensured = false;
 
+async function applyWarehouseRenames() {
+  for (const [from, to] of Object.entries(KHO_RENAMES)) {
+    const oldRow = await Warehouse.findOne({ where: { ten: from } });
+    const newRow = await Warehouse.findOne({ where: { ten: to } });
+
+    if (oldRow && !newRow) {
+      await oldRow.update({ ten: to });
+    } else if (oldRow && newRow) {
+      await oldRow.destroy();
+    }
+
+    for (const table of ["Assignments", "Vehicles", "Drivers"]) {
+      await sequelize.query(
+        `UPDATE "${table}" SET kho = :to WHERE kho = :from`,
+        { replacements: { from, to } }
+      );
+    }
+
+    await sequelize.query(
+      `UPDATE "Users" SET kho = REPLACE(kho, :from, :to) WHERE kho LIKE :like`,
+      { replacements: { from, to, like: `%${from}%` } }
+    );
+  }
+}
+
 async function ensureWarehouses() {
   if (ensured) return;
+
+  try {
+    await applyWarehouseRenames();
+  } catch (err) {
+    console.warn("applyWarehouseRenames:", err.message);
+  }
 
   const existingCount = await Warehouse.count();
   if (existingCount >= DEFAULT_WAREHOUSES.length) {
@@ -58,7 +94,8 @@ async function findWarehouseByName(ten) {
   const name = String(ten || "").trim();
   if (!name) return null;
 
-  const officialName = SHORT_TO_OFFICIAL[name];
+  const officialName =
+    SHORT_TO_OFFICIAL[name] || KHO_RENAMES[name] || null;
   if (officialName) {
     const official = await Warehouse.findOne({ where: { ten: officialName } });
     if (official) return official;
@@ -79,7 +116,8 @@ async function findWarehouseByName(ten) {
 
 function normalizeKhoName(kho) {
   const name = String(kho || "").trim();
-  return SHORT_TO_OFFICIAL[name] || name;
+  const renamed = KHO_RENAMES[name] || name;
+  return SHORT_TO_OFFICIAL[renamed] || SHORT_TO_OFFICIAL[name] || renamed;
 }
 
 function getKhoNameVariants(kho) {
@@ -93,6 +131,13 @@ function getKhoNameVariants(kho) {
     if (name === short || name === off || official === off) {
       variants.add(short);
       variants.add(off);
+    }
+  }
+
+  for (const [from, to] of Object.entries(KHO_RENAMES)) {
+    if (variants.has(from) || variants.has(to) || name === from || official === to) {
+      variants.add(from);
+      variants.add(to);
     }
   }
 
