@@ -1,9 +1,30 @@
 const sequelize = require("../database/database");
 const Vehicle = require("../models/Vehicle");
 
-async function syncVehicleKmFromOdo(vehicleId, odo) {
-  const km = Number(odo);
-  if (!vehicleId || !Number.isFinite(km) || km < 0) return;
+// Km hiện tại = ODO Check Out (không có thì Check In) của chuyến
+// **ngày phân công gần nhất**. Không lấy lần bấm Check In/Out mới nhất,
+// để Check Out hộ / Check In ngày cũ không ghi đè km ngày mới hơn.
+
+async function syncVehicleKmFromOdo(vehicleId) {
+  if (!vehicleId) return;
+
+  const [rows] = await sequelize.query(
+    `
+    SELECT CAST(COALESCE("odoCheckOut", "odoCheckIn") AS INTEGER) AS odo
+    FROM "Assignments"
+    WHERE "vehicleId" = :vehicleId
+      AND ("odoCheckOut" IS NOT NULL OR "odoCheckIn" IS NOT NULL)
+    ORDER BY
+      "ngay" DESC NULLS LAST,
+      COALESCE("checkOutTime", "checkInTime") DESC NULLS LAST,
+      "id" DESC
+    LIMIT 1
+    `,
+    { replacements: { vehicleId } }
+  );
+
+  const km = Number(rows?.[0]?.odo);
+  if (!Number.isFinite(km) || km < 0) return;
 
   await Vehicle.update(
     { kmHienTai: Math.round(km) },
@@ -27,6 +48,7 @@ async function backfillVehicleKmFromAssignments() {
       WHERE "odoCheckOut" IS NOT NULL OR "odoCheckIn" IS NOT NULL
       ORDER BY
         "vehicleId",
+        "ngay" DESC NULLS LAST,
         COALESCE("checkOutTime", "checkInTime") DESC NULLS LAST,
         "id" DESC
     ) AS sub
