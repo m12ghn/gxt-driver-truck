@@ -4,6 +4,9 @@ export const SHIFT_SCHEDULE = {
   "Ca 2": { start: "07:30", end: "19:30" },
 };
 
+export const CHECK_IN_CUTOFF = "08:30";
+export const CHECK_OUT_GRACE_MINUTES = 60;
+
 export const SHIFT_PAY = {
   "Ca 1": 370000,
   "Ca 2": 400000,
@@ -81,6 +84,34 @@ function vietnamClock(ngay, hhmm) {
   return new Date(
     `${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00+07:00`
   );
+}
+
+export function getCheckOutDeadline(ngay, ca) {
+  const shift = SHIFT_SCHEDULE[ca];
+  if (!shift) return null;
+  const end = vietnamClock(ngay, shift.end);
+  if (!end) return null;
+  return new Date(end.getTime() + CHECK_OUT_GRACE_MINUTES * 60 * 1000);
+}
+
+export function isAfterCheckInDeadline(ngay, now = new Date()) {
+  const deadline = vietnamClock(ngay, CHECK_IN_CUTOFF);
+  return Boolean(deadline && now > deadline);
+}
+
+export function isAfterCheckOutDeadline(ngay, ca, now = new Date()) {
+  const deadline = getCheckOutDeadline(ngay, ca);
+  return Boolean(deadline && now > deadline);
+}
+
+export function formatDeadlineLabel(date) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 }
 
 export function getCheckInStatus(checkInTime, ngay, ca) {

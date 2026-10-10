@@ -34,11 +34,28 @@ export default function CheckOutDialog({
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          await checkOutAssignment(assignment.id, {
+          const payload = {
             odoCheckOut: Number(odoCheckOut),
             checkOutLatitude: position.coords.latitude,
             checkOutLongitude: position.coords.longitude,
-          });
+          };
+
+          try {
+            await checkOutAssignment(assignment.id, payload);
+          } catch (err) {
+            if (
+              err.response?.status === 409 &&
+              err.response?.data?.needConfirmOdo &&
+              window.confirm(err.response.data.message)
+            ) {
+              await checkOutAssignment(assignment.id, {
+                ...payload,
+                confirmAbnormalOdo: true,
+              });
+            } else {
+              throw err;
+            }
+          }
 
           alert("Check Out thành công!");
 
@@ -50,6 +67,8 @@ export default function CheckOutDialog({
 
         } catch (err) {
           console.error(err);
+
+          if (err.response?.data?.needConfirmOdo) return;
 
           alert(
             err.response?.data?.message ||
@@ -80,7 +99,7 @@ export default function CheckOutDialog({
 
           <Grid size={{ xs: 12 }}>
             <Typography color="text.secondary">
-              ODO Check In: {assignment?.odoCheckIn ?? "-"}
+              ODO Check In: {assignment?.odoCheckIn ?? "-"} — Check Out phải lớn hơn
             </Typography>
           </Grid>
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -19,9 +19,11 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
-import { driverCheckIn, driverCheckOut } from "../api/assignmentApi";
+import { driverCheckIn, driverCheckOut, getTodayAssignment } from "../api/assignmentApi";
 import { uploadErrorMessage } from "../utils/compressImage";
 import { uploadDriverPhotos } from "../utils/uploadPhoto";
+
+const MAX_DAILY_KM = 100;
 
 // step 0 : nhập ODO
 // step 1 : danh sách 6 ảnh cần chụp (chụp tự do, không theo thứ tự)
@@ -59,12 +61,57 @@ export default function CheckInOutWizard({ mode }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
   const [gpsAlert, setGpsAlert] = useState(null);
+  const [odoAlert, setOdoAlert] = useState(null);
+  const [assignment, setAssignment] = useState(null);
+  const [confirmAbnormalOdo, setConfirmAbnormalOdo] = useState(false);
   const uploadedPhotosRef = useRef(null);
 
+  useEffect(() => {
+    if (!user?.msnv) return;
+    getTodayAssignment(user.msnv)
+      .then((res) => {
+        const item = res.data?.data;
+        if (item && (!id || Number(item.id) === Number(id))) {
+          setAssignment(item);
+        }
+      })
+      .catch(() => {});
+  }, [id, user?.msnv]);
+
   function handleOdoNext() {
-    if (!odo) {
-      alert("Vui lòng nhập số ODO.");
+    const value = Number(odo);
+    if (!odo || !Number.isFinite(value) || value < 0) {
+      alert("Vui lòng nhập số ODO hợp lệ.");
       return;
+    }
+
+    if (isCheckIn) {
+      const lastOdo = Number(assignment?.Vehicle?.kmHienTai);
+      if (Number.isFinite(lastOdo) && lastOdo > 0 && value <= lastOdo) {
+        alert(
+          `Số ODO phải lớn hơn ODO gần nhất của xe (${lastOdo}). Vui lòng kiểm tra lại đồng hồ ODO.`
+        );
+        return;
+      }
+    } else {
+      const checkIn = Number(assignment?.odoCheckIn);
+      if (Number.isFinite(checkIn) && value <= checkIn) {
+        alert(
+          `ODO Check Out phải lớn hơn ODO Check In (${checkIn}). Vui lòng kiểm tra lại đồng hồ ODO.`
+        );
+        return;
+      }
+      if (
+        Number.isFinite(checkIn) &&
+        value - checkIn > MAX_DAILY_KM &&
+        !confirmAbnormalOdo
+      ) {
+        const km = value - checkIn;
+        setOdoAlert({
+          message: `ODO bất thường: chuyến này phát sinh ${km} km (Check In ${checkIn} → Check Out ${value}), vượt ${MAX_DAILY_KM} km/ngày. Vui lòng kiểm tra lại đồng hồ ODO.`,
+        });
+        return;
+      }
     }
 
     setStep(STEP_PHOTOS);
@@ -128,7 +175,7 @@ export default function CheckInOutWizard({ mode }) {
     }
   }
 
-  async function handleSubmit(force = false) {
+  async function handleSubmit(confirmOdo = confirmAbnormalOdo) {
     setSubmitting(true);
     setSubmitStatus("Đang lấy GPS và tải ảnh...");
 
@@ -149,7 +196,6 @@ export default function CheckInOutWizard({ mode }) {
 
       const payload = {
         msnv: user.msnv,
-        forceGps: force,
         photos: photoMap,
       };
 
@@ -161,6 +207,7 @@ export default function CheckInOutWizard({ mode }) {
         payload.odoCheckOut = odo;
         payload.checkOutLatitude = position.coords.latitude;
         payload.checkOutLongitude = position.coords.longitude;
+        payload.confirmAbnormalOdo = confirmOdo;
         setSubmitStatus("Đang gửi check-out...");
       }
 
@@ -172,9 +219,13 @@ export default function CheckInOutWizard({ mode }) {
     } catch (err) {
       console.error(err);
 
-      // Sai tọa độ: không chặn cứng, hỏi tài xế có muốn tiếp tục không.
-      if (err.response?.status === 409 && err.response?.data?.needConfirm) {
+      if (err.response?.data?.gpsInvalid) {
         setGpsAlert(err.response.data);
+        return;
+      }
+
+      if (err.response?.data?.needConfirmOdo) {
+        setOdoAlert(err.response.data);
         return;
       }
 
@@ -256,7 +307,17 @@ export default function CheckInOutWizard({ mode }) {
             label={isCheckIn ? "ODO Check In" : "ODO Check Out"}
             type="number"
             value={odo}
-            onChange={(e) => setOdo(e.target.value)}
+            onChange={(e) => {
+              setOdo(e.target.value);
+              setConfirmAbnormalOdo(false);
+            }}
+            helperText={
+              !isCheckIn && assignment?.odoCheckIn
+                ? `ODO Check In: ${assignment.odoCheckIn}`
+                : isCheckIn && Number(assignment?.Vehicle?.kmHienTai) > 0
+                  ? `ODO gần nhất của xe: ${assignment.Vehicle.kmHienTai}`
+                  : " "
+            }
             sx={{ mb: 3 }}
           />
 
@@ -318,7 +379,7 @@ export default function CheckInOutWizard({ mode }) {
             color={isCheckIn ? "primary" : "warning"}
             size="large"
             disabled={submitting}
-            onClick={() => handleSubmit(false)}
+            onClick={() => handleSubmit()}
           >
             {submitting
               ? submitStatus || "Đang xử lý..."
@@ -326,6 +387,43 @@ export default function CheckInOutWizard({ mode }) {
           </Button>
         </Paper>
       )}
+
+      <Dialog open={Boolean(odoAlert)} onClose={() => setOdoAlert(null)}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningAmberIcon color="warning" />
+          ODO bất thường
+        </DialogTitle>
+
+        <DialogContent>
+          <Typography>{odoAlert?.message}</Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ flexDirection: "column", gap: 1, p: 2 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => setOdoAlert(null)}
+          >
+            Kiểm tra lại
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            color="warning"
+            onClick={() => {
+              setOdoAlert(null);
+              setConfirmAbnormalOdo(true);
+              if (step === STEP_ODO) {
+                setStep(STEP_PHOTOS);
+                return;
+              }
+              handleSubmit(true);
+            }}
+          >
+            Số đúng, tiếp tục hoàn thành
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={Boolean(gpsAlert)} onClose={() => setGpsAlert(null)}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -337,25 +435,13 @@ export default function CheckInOutWizard({ mode }) {
           <Typography>{gpsAlert?.message}</Typography>
         </DialogContent>
 
-        <DialogActions sx={{ flexDirection: "column", gap: 1, p: 2 }}>
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={() => setGpsAlert(null)}
-          >
-            Di chuyển về khu vực kho
-          </Button>
-
+        <DialogActions sx={{ p: 2 }}>
           <Button
             fullWidth
             variant="contained"
-            color="warning"
-            onClick={() => {
-              setGpsAlert(null);
-              handleSubmit(true);
-            }}
+            onClick={() => setGpsAlert(null)}
           >
-            Tiếp tục {title} sai tọa độ
+            Di chuyển về khu vực kho
           </Button>
         </DialogActions>
       </Dialog>

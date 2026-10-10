@@ -17,6 +17,10 @@ const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
 const { findWarehouseByName } = require("../utils/ensureWarehouses");
 const { withReadablePhotosList } = require("../utils/uploadToSupabase");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
+const {
+  validateCheckInOdo,
+  validateCheckOutOdo,
+} = require("../utils/odoHelpers");
 
 function publicErrorMessage(err, fallback) {
   const msg = err?.message || "";
@@ -24,10 +28,6 @@ function publicErrorMessage(err, fallback) {
     return "Hệ thống đang bận, vui lòng đợi 5 giây rồi gửi lại.";
   }
   return fallback || msg || "Có lỗi xảy ra.";
-}
-
-function isForceGps(value) {
-  return value === true || value === "true";
 }
 
 function isHttpUrl(value) {
@@ -121,7 +121,6 @@ exports.driverCheckIn = async (req, res) => {
       odoCheckIn,
       checkInLatitude,
       checkInLongitude,
-      forceGps,
     } = req.body;
 
     if (!msnv || assignment.Driver?.msnv !== msnv) {
@@ -158,6 +157,15 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
+    const odoCheck = await validateCheckInOdo({
+      vehicleId: assignment.vehicleId,
+      ngay: assignment.ngay,
+      odo: odoCheckIn,
+    });
+    if (!odoCheck.ok) {
+      return res.status(odoCheck.status).json(odoCheck.body);
+    }
+
     const resolved = await resolveCheckPhotos(req, "checkin");
 
     if (resolved.missing.length > 0) {
@@ -185,16 +193,13 @@ exports.driverCheckIn = async (req, res) => {
 
     const gpsValid = distance <= warehouse.banKinh;
 
-    // GPS sai vị trí: không chặn cứng, chỉ cảnh báo và yêu cầu tài xế
-    // xác nhận muốn tiếp tục hay quay lại khu vực kho. Lần gọi đầu
-    // (forceGps chưa gửi) trả 409 để FE hiện dialog xác nhận.
-    if (!gpsValid && !isForceGps(forceGps)) {
-      return res.status(409).json({
+    if (!gpsValid) {
+      return res.status(400).json({
         success: false,
-        needConfirm: true,
+        gpsInvalid: true,
         message: `Bạn đang Check In sai tọa độ, cách kho "${warehouse.ten}" khoảng ${Math.round(
           distance
-        )}m (cho phép ${warehouse.banKinh}m).`,
+        )}m (cho phép ${warehouse.banKinh}m). Vui lòng di chuyển về khu vực kho rồi thử lại.`,
         distance: Math.round(distance),
         allowedRadius: warehouse.banKinh,
         khoTen: warehouse.ten,
@@ -206,7 +211,7 @@ exports.driverCheckIn = async (req, res) => {
     await assignment.update({
       trangThai: "Đã Check In",
       checkInTime: new Date(),
-      odoCheckIn,
+      odoCheckIn: odoCheck.odo,
       checkInLatitude,
       checkInLongitude,
       checkInDistanceMeters: distance,
@@ -240,6 +245,8 @@ exports.driverCheckIn = async (req, res) => {
 // ==============================
 exports.driverCheckOut = async (req, res) => {
   try {
+    await markOverdueAssignments();
+
     const assignment = await Assignment.findOne({
       where: { id: req.params.id },
       include: [Vehicle, Driver],
@@ -257,7 +264,7 @@ exports.driverCheckOut = async (req, res) => {
       odoCheckOut,
       checkOutLatitude,
       checkOutLongitude,
-      forceGps,
+      confirmAbnormalOdo,
     } = req.body;
 
     if (!msnv || assignment.Driver?.msnv !== msnv) {
@@ -288,6 +295,17 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
+    const odoCheck = await validateCheckOutOdo({
+      vehicleId: assignment.vehicleId,
+      ngay: assignment.ngay,
+      odoCheckIn: assignment.odoCheckIn,
+      odoCheckOut,
+      confirmAbnormal: confirmAbnormalOdo,
+    });
+    if (!odoCheck.ok) {
+      return res.status(odoCheck.status).json(odoCheck.body);
+    }
+
     const resolved = await resolveCheckPhotos(req, "checkout");
 
     if (resolved.missing.length > 0) {
@@ -315,13 +333,13 @@ exports.driverCheckOut = async (req, res) => {
 
     const gpsValid = distance <= warehouse.banKinh;
 
-    if (!gpsValid && !isForceGps(forceGps)) {
-      return res.status(409).json({
+    if (!gpsValid) {
+      return res.status(400).json({
         success: false,
-        needConfirm: true,
+        gpsInvalid: true,
         message: `Bạn đang Check Out sai tọa độ, cách kho "${warehouse.ten}" khoảng ${Math.round(
           distance
-        )}m (cho phép ${warehouse.banKinh}m).`,
+        )}m (cho phép ${warehouse.banKinh}m). Vui lòng di chuyển về khu vực kho rồi thử lại.`,
         distance: Math.round(distance),
         allowedRadius: warehouse.banKinh,
         khoTen: warehouse.ten,
@@ -333,7 +351,7 @@ exports.driverCheckOut = async (req, res) => {
     await assignment.update({
       trangThai: "Hoàn thành",
       checkOutTime: new Date(),
-      odoCheckOut,
+      odoCheckOut: odoCheck.odo,
       checkOutLatitude,
       checkOutLongitude,
       checkOutDistanceMeters: distance,

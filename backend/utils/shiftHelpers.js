@@ -6,6 +6,11 @@ const SHIFT_SCHEDULE = {
   "Ca 2": { start: "07:30", end: "19:30" },
 };
 
+// Check In sau giờ này thì khóa. Check Out khóa sau giờ tan ca + 1 giờ
+// (Ca 1 18:30 → 19:30, Ca 2 19:30 → 20:30).
+const CHECK_IN_CUTOFF = "08:30";
+const CHECK_OUT_GRACE_MINUTES = 60;
+
 const SHIFT_PAY = {
   "Ca 1": 370000,
   "Ca 2": 400000,
@@ -65,6 +70,36 @@ function getShiftEnd(ngay, ca) {
   return vietnamClock(ngay, shift.end);
 }
 
+function getCheckInDeadline(ngay) {
+  return vietnamClock(ngay, CHECK_IN_CUTOFF);
+}
+
+function getCheckOutDeadline(ngay, ca) {
+  const end = getShiftEnd(ngay, ca);
+  if (!end) return null;
+  return new Date(end.getTime() + CHECK_OUT_GRACE_MINUTES * 60 * 1000);
+}
+
+function formatVietnamHhmm(date) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function isAfterCheckInDeadline(ngay, now = new Date()) {
+  const deadline = getCheckInDeadline(ngay);
+  return Boolean(deadline && now > deadline);
+}
+
+function isAfterCheckOutDeadline(ngay, ca, now = new Date()) {
+  const deadline = getCheckOutDeadline(ngay, ca);
+  return Boolean(deadline && now > deadline);
+}
+
 function getCheckInStatus(checkInTime, ngay, ca) {
   if (!checkInTime || !ngay) return null;
 
@@ -102,11 +137,18 @@ function getMissingCheckInAlert(ngay, ca, checkInTime, now = new Date()) {
 module.exports = {
   SHIFT_SCHEDULE,
   SHIFT_PAY,
+  CHECK_IN_CUTOFF,
+  CHECK_OUT_GRACE_MINUTES,
   normalizeCa,
   getShiftPayroll,
   vietnamClock,
   getShiftStart,
   getShiftEnd,
+  getCheckInDeadline,
+  getCheckOutDeadline,
+  formatVietnamHhmm,
+  isAfterCheckInDeadline,
+  isAfterCheckOutDeadline,
   getCheckInStatus,
   getMissingCheckInAlert,
 };

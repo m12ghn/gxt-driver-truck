@@ -52,8 +52,8 @@ const Assignment = sequelize.define("Assignment", {
     allowNull: true,
   },
 
-  // true = trong bán kính cho phép, false = tài xế đã chọn
-  // "Tiếp tục Check In sai tọa độ", null = chưa xác định (chuyến cũ).
+  // true = trong bán kính cho phép, false = sai tọa độ (đã bị chặn).
+  // null = chưa xác định (chuyến cũ trước khi có kiểm tra GPS).
   checkInGpsValid: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
@@ -130,8 +130,8 @@ const Assignment = sequelize.define("Assignment", {
     allowNull: true,
   },
 
-  // true = trong bán kính cho phép, false = tài xế đã chọn
-  // "Tiếp tục Check Out sai tọa độ", null = chưa xác định (chuyến cũ).
+  // true = trong bán kính, false = sai tọa độ (đã bị chặn).
+  // null = chưa xác định (chuyến cũ).
   checkOutGpsValid: {
     type: DataTypes.BOOLEAN,
     allowNull: true,

@@ -24,6 +24,10 @@ const {
   assertWarehouseKhoChoice,
 } = require("../utils/scopeHelpers");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
+const {
+  validateCheckInOdo,
+  validateCheckOutOdo,
+} = require("../utils/odoHelpers");
 const { getShiftPayroll } = require("../utils/shiftHelpers");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 const {
@@ -525,10 +529,19 @@ exports.checkIn = async (req, res) => {
       checkInLongitude,
     } = req.body;
 
+    const odoCheck = await validateCheckInOdo({
+      vehicleId: assignment.vehicleId,
+      ngay: assignment.ngay,
+      odo: odoCheckIn,
+    });
+    if (!odoCheck.ok) {
+      return res.status(odoCheck.status).json(odoCheck.body);
+    }
+
     await assignment.update({
       trangThai: "Đã Check In",
       checkInTime: new Date(),
-      odoCheckIn,
+      odoCheckIn: odoCheck.odo,
       checkInLatitude,
       checkInLongitude,
     });
@@ -590,12 +603,24 @@ exports.checkOut = async (req, res) => {
       odoCheckOut,
       checkOutLatitude,
       checkOutLongitude,
+      confirmAbnormalOdo,
     } = req.body;
+
+    const odoCheck = await validateCheckOutOdo({
+      vehicleId: assignment.vehicleId,
+      ngay: assignment.ngay,
+      odoCheckIn: assignment.odoCheckIn,
+      odoCheckOut,
+      confirmAbnormal: confirmAbnormalOdo,
+    });
+    if (!odoCheck.ok) {
+      return res.status(odoCheck.status).json(odoCheck.body);
+    }
 
     await assignment.update({
       trangThai: "Hoàn thành",
       checkOutTime: new Date(),
-      odoCheckOut,
+      odoCheckOut: odoCheck.odo,
       checkOutLatitude,
       checkOutLongitude,
       warehouseStatus: "Chờ xác nhận",
@@ -661,6 +686,7 @@ exports.adminCheckOut = async (req, res) => {
       checkOutLongitude,
       checkOutBy,
       adminCheckoutReason,
+      confirmAbnormalOdo,
     } = req.body;
 
     if (!checkOutBy || !adminCheckoutReason) {
@@ -670,10 +696,21 @@ exports.adminCheckOut = async (req, res) => {
       });
     }
 
+    const odoCheck = await validateCheckOutOdo({
+      vehicleId: assignment.vehicleId,
+      ngay: assignment.ngay,
+      odoCheckIn: assignment.odoCheckIn,
+      odoCheckOut,
+      confirmAbnormal: confirmAbnormalOdo,
+    });
+    if (!odoCheck.ok) {
+      return res.status(odoCheck.status).json(odoCheck.body);
+    }
+
     await assignment.update({
       trangThai: "Hoàn thành",
       checkOutTime: new Date(),
-      odoCheckOut,
+      odoCheckOut: odoCheck.odo,
       checkOutLatitude,
       checkOutLongitude,
       checkOutBy,

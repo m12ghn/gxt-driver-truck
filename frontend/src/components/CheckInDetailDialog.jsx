@@ -169,8 +169,7 @@ export default function CheckInDetailDialog({
         {assignment.checkInGpsValid === false && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             Tài xế đã Check In sai tọa độ — cách kho khoảng{" "}
-            <b>{Math.round(assignment.checkInDistanceMeters)}m</b> (đã chọn
-            "Tiếp tục Check In sai tọa độ").
+            <b>{Math.round(assignment.checkInDistanceMeters)}m</b>.
           </Alert>
         )}
 

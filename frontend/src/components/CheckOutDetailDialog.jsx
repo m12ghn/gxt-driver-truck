@@ -152,8 +152,7 @@ export default function CheckOutDetailDialog({
         {assignment.checkOutGpsValid === false && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             Tài xế đã Check Out sai tọa độ — cách kho khoảng{" "}
-            <b>{Math.round(assignment.checkOutDistanceMeters)}m</b> (đã chọn
-            "Tiếp tục Check Out sai tọa độ").
+            <b>{Math.round(assignment.checkOutDistanceMeters)}m</b>.
           </Alert>
         )}
 

@@ -48,12 +48,28 @@ export default function AdminCheckoutDialog({
     }
 
     try {
-
-      await adminCheckOutAssignment(assignment.id, {
+      const payload = {
         odoCheckOut: Number(odoCheckOut),
         checkOutBy,
         adminCheckoutReason,
-      });
+      };
+
+      try {
+        await adminCheckOutAssignment(assignment.id, payload);
+      } catch (err) {
+        if (
+          err.response?.status === 409 &&
+          err.response?.data?.needConfirmOdo &&
+          window.confirm(err.response.data.message)
+        ) {
+          await adminCheckOutAssignment(assignment.id, {
+            ...payload,
+            confirmAbnormalOdo: true,
+          });
+        } else {
+          throw err;
+        }
+      }
 
       alert("Admin Check Out hộ thành công!");
 
@@ -66,6 +82,8 @@ export default function AdminCheckoutDialog({
     } catch (err) {
 
       console.error(err);
+
+      if (err.response?.data?.needConfirmOdo) return;
 
       alert(
         err.response?.data?.message ||
@@ -96,6 +114,11 @@ export default function AdminCheckoutDialog({
               fullWidth
               label="ODO Check Out"
               type="number"
+              helperText={
+                assignment?.odoCheckIn
+                  ? `ODO Check In: ${assignment.odoCheckIn} — Check Out phải lớn hơn`
+                  : " "
+              }
               value={odoCheckOut}
               onChange={(e) =>
                 setOdoCheckOut(e.target.value)
