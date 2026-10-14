@@ -1,5 +1,8 @@
 const Vehicle = require("../models/Vehicle");
+const Assignment = require("../models/Assignment");
+const Driver = require("../models/Driver");
 const { backfillVehicleKmFromAssignments } = require("../utils/syncVehicleKm");
+const { vietnamToday } = require("../utils/assignmentHelpers");
 
 // Lấy danh sách xe
 exports.getVehicles = async (req, res) => {
@@ -8,13 +11,43 @@ exports.getVehicles = async (req, res) => {
       console.error("backfillVehicleKmFromAssignments:", err.message)
     );
 
+    const today = vietnamToday();
     const vehicles = await Vehicle.findAll({
       order: [["id", "DESC"]],
     });
 
+    const todayTrips = await Assignment.findAll({
+      where: { ngay: today },
+      include: [
+        { model: Driver, attributes: ["hoTen", "msnv"] },
+      ],
+    });
+
+    const tripByVehicle = new Map();
+    for (const trip of todayTrips) {
+      tripByVehicle.set(Number(trip.vehicleId), trip);
+    }
+
+    const data = vehicles.map((vehicle) => {
+      const item = vehicle.toJSON();
+      const trip = tripByVehicle.get(Number(vehicle.id));
+      item.coLichHomNay = Boolean(trip);
+      item.trangThaiHomNay = trip ? "Hoạt động" : "Không hoạt động";
+      item.lichHomNay = trip
+        ? {
+            ca: trip.ca,
+            kho: trip.kho,
+            trangThai: trip.trangThai,
+            taiXe: trip.Driver?.hoTen || "",
+            msnv: trip.Driver?.msnv || "",
+          }
+        : null;
+      return item;
+    });
+
     res.json({
       success: true,
-      data: vehicles,
+      data,
     });
   } catch (err) {
     res.status(500).json({

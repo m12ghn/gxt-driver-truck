@@ -151,10 +151,11 @@ export default function VehicleDialog({
           <Grid size={{ xs: 6 }}>
             <TextField
               select
-              label="Trạng thái"
+              label="Tình trạng xe"
               name="trangThai"
               value={form.trangThai}
               onChange={handleChange}
+              helperText="Bảo dưỡng / Ngưng. Trạng thái chạy trên danh sách lấy theo lịch hôm nay."
               fullWidth
             >
               <MenuItem value="Hoạt động">Hoạt động</MenuItem>

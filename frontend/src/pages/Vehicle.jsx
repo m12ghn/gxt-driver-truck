@@ -7,6 +7,7 @@ import {
 } from "../api/vehicleApi";
 
 import VehicleDialog from "../components/VehicleDialog";
+import { brand } from "../theme/brand";
 
 import {
   Box,
@@ -21,12 +22,40 @@ import {
   Button,
   Stack,
   TextField,
+  Chip,
+  TableContainer,
 } from "@mui/material";
+
+function liveStatus(vehicle) {
+  return vehicle.trangThaiHomNay ||
+    (vehicle.coLichHomNay ? "Hoạt động" : "Không hoạt động");
+}
+
+function ActiveDot() {
+  return (
+    <Box
+      sx={{
+        width: 8,
+        height: 8,
+        borderRadius: "50%",
+        bgcolor: "#22c55e",
+        boxShadow: "0 0 0 0 rgba(34,197,94,0.55)",
+        animation: "vehiclePulse 1.6s ease-out infinite",
+        "@keyframes vehiclePulse": {
+          "0%": { boxShadow: "0 0 0 0 rgba(34,197,94,0.55)", transform: "scale(1)" },
+          "70%": { boxShadow: "0 0 0 8px rgba(34,197,94,0)", transform: "scale(1.15)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(34,197,94,0)", transform: "scale(1)" },
+        },
+      }}
+    />
+  );
+}
 
 export default function Vehicle() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
@@ -127,17 +156,35 @@ export default function Vehicle() {
   }
 
   const keyword = search.trim().toLowerCase();
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    if (!keyword) return true;
-    return [
-      vehicle.bienSo,
-      vehicle.loaiXe,
-      vehicle.kho,
-      vehicle.trangThai,
-      vehicle.ghiChu,
-      vehicle.kmHienTai,
-    ].some((value) => String(value || "").toLowerCase().includes(keyword));
-  });
+  const filteredVehicles = vehicles
+    .filter((vehicle) => {
+      const status = liveStatus(vehicle);
+      if (statusFilter && status !== statusFilter) return false;
+      if (!keyword) return true;
+      const trip = vehicle.lichHomNay || {};
+      return [
+        vehicle.bienSo,
+        vehicle.loaiXe,
+        vehicle.kho,
+        vehicle.trangThai,
+        status,
+        vehicle.ghiChu,
+        vehicle.kmHienTai,
+        trip.ca,
+        trip.kho,
+        trip.taiXe,
+        trip.msnv,
+      ].some((value) => String(value || "").toLowerCase().includes(keyword));
+    })
+    .sort((a, b) => {
+      const activeA = liveStatus(a) === "Hoạt động" ? 1 : 0;
+      const activeB = liveStatus(b) === "Hoạt động" ? 1 : 0;
+      if (activeA !== activeB) return activeB - activeA;
+      return Number(b.id) - Number(a.id);
+    });
+
+  const activeCount = vehicles.filter((v) => liveStatus(v) === "Hoạt động").length;
+  const idleCount = vehicles.length - activeCount;
 
   return (
     <Box>
@@ -146,8 +193,15 @@ export default function Vehicle() {
         justifyContent="space-between"
         alignItems="center"
         mb={3}
+        flexWrap="wrap"
+        gap={2}
       >
-        <Typography variant="h4">Quản lý xe</Typography>
+        <Box>
+          <Typography variant="h4">Quản lý xe</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Trạng thái theo lịch phân công hôm nay
+          </Typography>
+        </Box>
 
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" onClick={handleDownloadTemplate}>
@@ -170,15 +224,46 @@ export default function Vehicle() {
         </Stack>
       </Stack>
 
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap mb={2}>
+        <Chip
+          clickable
+          color={statusFilter === "" ? "primary" : "default"}
+          variant={statusFilter === "" ? "filled" : "outlined"}
+          label={`Tổng: ${vehicles.length}`}
+          onClick={() => setStatusFilter("")}
+        />
+        <Chip
+          clickable
+          color={statusFilter === "Hoạt động" ? "success" : "default"}
+          variant={statusFilter === "Hoạt động" ? "filled" : "outlined"}
+          label={`Hoạt động hôm nay: ${activeCount}`}
+          onClick={() =>
+            setStatusFilter(statusFilter === "Hoạt động" ? "" : "Hoạt động")
+          }
+        />
+        <Chip
+          clickable
+          color={statusFilter === "Không hoạt động" ? "warning" : "default"}
+          variant={statusFilter === "Không hoạt động" ? "filled" : "outlined"}
+          label={`Không hoạt động: ${idleCount}`}
+          onClick={() =>
+            setStatusFilter(
+              statusFilter === "Không hoạt động" ? "" : "Không hoạt động"
+            )
+          }
+        />
+      </Stack>
+
       <TextField
         size="small"
-        label="Tìm biển số / loại xe / kho / trạng thái"
+        label="Tìm biển số / loại xe / kho / trạng thái / tài xế"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        sx={{ width: 360, mb: 2 }}
+        sx={{ width: 380, mb: 2, maxWidth: "100%" }}
       />
 
-      <Paper>
+      <Paper sx={{ overflow: "hidden" }}>
+        <TableContainer sx={{ overflowX: "auto" }}>
         <Table>
           <TableHead>
             <TableRow>
@@ -187,7 +272,7 @@ export default function Vehicle() {
               <TableCell>Loại xe</TableCell>
               <TableCell>Kho</TableCell>
               <TableCell>Km hiện tại</TableCell>
-              <TableCell>Trạng thái</TableCell>
+              <TableCell>Trạng thái hôm nay</TableCell>
               <TableCell>Ghi chú</TableCell>
               <TableCell align="center">Thao tác</TableCell>
             </TableRow>
@@ -197,18 +282,68 @@ export default function Vehicle() {
             {filteredVehicles.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center">
-                  {keyword ? "Không tìm thấy xe phù hợp." : "Chưa có xe."}
+                  {keyword || statusFilter
+                    ? "Không tìm thấy xe phù hợp."
+                    : "Chưa có xe."}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredVehicles.map((vehicle) => (
-              <TableRow key={vehicle.id}>
+              filteredVehicles.map((vehicle) => {
+                const active = liveStatus(vehicle) === "Hoạt động";
+                const trip = vehicle.lichHomNay;
+
+                return (
+              <TableRow
+                key={vehicle.id}
+                hover
+                sx={
+                  active
+                    ? {
+                        bgcolor: brand.tealSoft,
+                        "& td": { borderColor: "rgba(15,155,148,0.12)" },
+                      }
+                    : undefined
+                }
+              >
                 <TableCell>{vehicle.id}</TableCell>
-                <TableCell>{vehicle.bienSo}</TableCell>
+                <TableCell>
+                  <Typography fontWeight={800} sx={{ letterSpacing: 0.3 }}>
+                    {vehicle.bienSo}
+                  </Typography>
+                </TableCell>
                 <TableCell>{vehicle.loaiXe}</TableCell>
                 <TableCell>{vehicle.kho}</TableCell>
                 <TableCell>{vehicle.kmHienTai}</TableCell>
-                <TableCell>{vehicle.trangThai}</TableCell>
+                <TableCell>
+                  {active ? (
+                    <Stack spacing={0.6} alignItems="flex-start">
+                      <Chip
+                        size="small"
+                        color="success"
+                        icon={<ActiveDot />}
+                        label="Hoạt động"
+                        sx={{
+                          fontWeight: 700,
+                          "& .MuiChip-icon": { ml: 1, mr: -0.25 },
+                        }}
+                      />
+                      {trip && (
+                        <Typography variant="caption" color="text.secondary">
+                          {[trip.ca, trip.taiXe || trip.msnv, trip.trangThai]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </Typography>
+                      )}
+                    </Stack>
+                  ) : (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label="Không hoạt động"
+                      sx={{ color: brand.gray, borderColor: brand.border }}
+                    />
+                  )}
+                </TableCell>
                 <TableCell>{vehicle.ghiChu}</TableCell>
                 <TableCell align="center">
                   <Button size="small" onClick={() => handleEdit(vehicle)}>
@@ -224,10 +359,12 @@ export default function Vehicle() {
                   </Button>
                 </TableCell>
               </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
+        </TableContainer>
       </Paper>
 
       <VehicleDialog
