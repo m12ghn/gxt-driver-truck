@@ -462,24 +462,14 @@ export default function Dashboard() {
             </Tooltip>
           </Stack>
         </Stack>
-      </Paper>
 
-      <Paper
-        elevation={0}
-        sx={{
-          p: 2,
-          mb: 1.5,
-          borderRadius: 3,
-          border: "1px solid",
-          borderColor: "grey.200",
-        }}
-      >
         <Stack
           direction="row"
-          spacing={2}
+          spacing={1.5}
           flexWrap="wrap"
           useFlexGap
           alignItems="center"
+          sx={{ mt: 2 }}
         >
           <TextField
             type="date"
@@ -488,6 +478,7 @@ export default function Dashboard() {
             InputLabelProps={{ shrink: true }}
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value || today)}
+            sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
           <TextField
             type="date"
@@ -496,6 +487,7 @@ export default function Dashboard() {
             InputLabelProps={{ shrink: true }}
             value={toDate}
             onChange={(e) => setToDate(e.target.value || today)}
+            sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
           {isWarehouse && khoOptions.length <= 1 ? (
             <TextField
@@ -503,10 +495,13 @@ export default function Dashboard() {
               label="Kho"
               value={formatKhoLabel(khoOptions) || "Chưa gán kho"}
               InputProps={{ readOnly: true }}
-              sx={{ minWidth: 200, maxWidth: 320 }}
+              sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 200, maxWidth: 320 }}
             />
           ) : (
-            <FormControl size="small" sx={{ minWidth: 260, maxWidth: 420 }}>
+            <FormControl
+              size="small"
+              sx={{ minWidth: 260, maxWidth: 420, bgcolor: "#fff", borderRadius: 1 }}
+            >
               <InputLabel id="dashboard-kho-label">Kho</InputLabel>
               <Select
                 labelId="dashboard-kho-label"
@@ -547,6 +542,7 @@ export default function Dashboard() {
                 onDelete={() =>
                   setSelectedKho((prev) => prev.filter((item) => item !== kho))
                 }
+                sx={{ bgcolor: "rgba(255,255,255,0.92)" }}
               />
             ))}
           </Stack>
