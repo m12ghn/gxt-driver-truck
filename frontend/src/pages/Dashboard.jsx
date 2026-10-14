@@ -179,12 +179,12 @@ function SectionHeading({ children, sx }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
-  const today = vietnamToday();
+  const todayStr = vietnamToday();
   const isWarehouse = user?.quyen === "WAREHOUSE";
   const managedKhoList = parseKhoList(user?.khoList || user?.kho);
 
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
+  const [fromDate, setFromDate] = useState(todayStr);
+  const [toDate, setToDate] = useState(todayStr);
   const [selectedKho, setSelectedKho] = useState([]);
   const [khoOptions, setKhoOptions] = useState(
     isWarehouse && managedKhoList.length ? managedKhoList : fallbackWarehouses
@@ -477,7 +477,7 @@ export default function Dashboard() {
             label="Từ ngày"
             InputLabelProps={{ shrink: true }}
             value={fromDate}
-            onChange={(e) => setFromDate(e.target.value || today)}
+            onChange={(e) => setFromDate(e.target.value || todayStr)}
             sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
           <TextField
@@ -486,7 +486,7 @@ export default function Dashboard() {
             label="Đến ngày"
             InputLabelProps={{ shrink: true }}
             value={toDate}
-            onChange={(e) => setToDate(e.target.value || today)}
+            onChange={(e) => setToDate(e.target.value || todayStr)}
             sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
           {isWarehouse && khoOptions.length <= 1 ? (
