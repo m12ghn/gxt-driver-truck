@@ -5,13 +5,18 @@ const Assignment = require("../models/Assignment");
 const Vehicle = require("../models/Vehicle");
 const Driver = require("../models/Driver");
 
-const { markOverdueAssignments, vietnamToday } = require("../utils/assignmentHelpers");
+const {
+  markOverdueAssignments,
+  vietnamToday,
+  addDays,
+} = require("../utils/assignmentHelpers");
 const {
   applyWarehouseScope,
   getScopedKho,
   warehouseKhoFilter,
   assertWarehouseAccess,
   parseKhoList,
+  userKhoValue,
 } = require("../utils/scopeHelpers");
 const {
   getCheckInStatus,
@@ -54,6 +59,69 @@ function vnDateStr(date = new Date()) {
   return date.toLocaleDateString("en-CA", {
     timeZone: "Asia/Ho_Chi_Minh",
   });
+}
+
+function parseQueryKhoList(raw) {
+  const chunks = Array.isArray(raw) ? raw : [raw];
+  const names = [];
+  for (const chunk of chunks) {
+    const text = String(chunk || "").trim();
+    if (!text) continue;
+    names.push(...parseKhoList(text.replace(/,/g, "|")));
+  }
+  return [...new Set(names)];
+}
+
+function resolveDashboardRange(query = {}) {
+  const todayStr = vietnamToday();
+  let from = assignmentDateKey(query.from) || todayStr;
+  let to = assignmentDateKey(query.to) || todayStr;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) from = todayStr;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(to)) to = todayStr;
+  if (from > to) [from, to] = [to, from];
+
+  const start = new Date(`${from}T12:00:00+07:00`);
+  const end = new Date(`${to}T12:00:00+07:00`);
+  const span = Math.round((end - start) / 86400000) + 1;
+  if (span > 366) {
+    const err = new Error("Khoảng ngày tối đa 366 ngày.");
+    err.status = 400;
+    throw err;
+  }
+
+  return { from, to, todayStr, span };
+}
+
+function listDays(from, to) {
+  const days = [];
+  let cur = from;
+  while (cur <= to) {
+    days.push(cur);
+    cur = addDays(cur, 1);
+  }
+  return days;
+}
+
+function resolveDashboardKhoFilter(req, khoQuery) {
+  const requested = parseQueryKhoList(khoQuery);
+
+  if (req.user?.quyen === "WAREHOUSE") {
+    const chosen = requested.length
+      ? requested.filter((name) => {
+          try {
+            assertWarehouseAccess(req, name);
+            return true;
+          } catch {
+            return false;
+          }
+        })
+      : parseKhoList(userKhoValue(req.user));
+    if (!chosen.length) return warehouseKhoFilter(userKhoValue(req.user));
+    return warehouseKhoFilter(chosen.join("|"));
+  }
+
+  if (!requested.length) return null;
+  return warehouseKhoFilter(requested.join("|"));
 }
 
 function hasGpsViolation(item) {
@@ -102,26 +170,26 @@ function summarize(assignments) {
 }
 
 // ==============================
-// GET /api/stats/dashboard
-// Số liệu hôm nay + xu hướng 7 ngày gần nhất
+// GET /api/stats/dashboard?from=&to=&kho=
+// Số liệu theo khoảng ngày + kho (nhiều kho). Mặc định hôm nay / tất cả kho.
 // ==============================
 exports.getDashboardStats = async (req, res) => {
   try {
-    const todayStr = vietnamToday();
-    const today = new Date(`${todayStr}T12:00:00+07:00`);
-
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    const fromStr = vnDateStr(sevenDaysAgo);
+    const { from, to } = resolveDashboardRange(req.query);
+    const khoFilter = resolveDashboardKhoFilter(req, req.query.kho);
+    const scopedKho = getScopedKho(req);
+    const selectedKho = parseQueryKhoList(req.query.kho);
 
     const where = applyWarehouseScope(req, {
-      ngay: { [Op.between]: [fromStr, todayStr] },
+      ngay: { [Op.between]: [from, to] },
     });
+    if (khoFilter) where.kho = khoFilter;
 
-    const scopedKho = getScopedKho(req);
-    const resourceWhere = scopedKho
-      ? { kho: warehouseKhoFilter(scopedKho) }
-      : {};
+    const resourceWhere = khoFilter
+      ? { kho: khoFilter }
+      : scopedKho
+        ? { kho: warehouseKhoFilter(scopedKho) }
+        : {};
 
     const assignments = await Assignment.findAll({
       where,
@@ -137,33 +205,19 @@ exports.getDashboardStats = async (req, res) => {
       attributes: ["trangThai"],
     });
 
-    const todayAssignments = assignments.filter(
-      (item) => assignmentDateKey(item.ngay) === todayStr
-    );
-
-    const todaySummary = summarize(todayAssignments);
-
-    const trend = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dStr = vnDateStr(d);
-
-      const dayAssignments = assignments.filter(
-        (item) => assignmentDateKey(item.ngay) === dStr
+    const periodSummary = summarize(assignments);
+    const trend = listDays(from, to).map((dStr) => {
+      const daySummary = summarize(
+        assignments.filter((item) => assignmentDateKey(item.ngay) === dStr)
       );
-
-      const daySummary = summarize(dayAssignments);
-
-      trend.push({
+      return {
         ngay: dStr,
         total: daySummary.total,
         hoanThanh: daySummary.hoanThanh,
         late: daySummary.late,
         gpsViolation: daySummary.gpsViolation,
-      });
-    }
+      };
+    });
 
     const totalVehicles = vehicles.length;
     const activeVehicles = vehicles.filter(
@@ -177,19 +231,22 @@ exports.getDashboardStats = async (req, res) => {
     res.json({
       success: true,
       data: {
-        today: todaySummary,
+        from,
+        to,
+        today: periodSummary,
         vehicles: { total: totalVehicles, active: activeVehicles },
         drivers: { total: totalDrivers, active: activeDrivers },
         trend,
         kho: scopedKho,
         khoList: parseKhoList(scopedKho),
+        selectedKho,
       },
     });
     kickOverdueMark();
   } catch (err) {
     console.error(err);
 
-    res.status(500).json({
+    res.status(err.status || 500).json({
       success: false,
       message: err.message,
     });
@@ -203,23 +260,32 @@ exports.getDashboardStats = async (req, res) => {
 // ==============================
 exports.getAlerts = async (req, res) => {
   try {
-    const todayStr = vietnamToday();
+    const { from, to } = resolveDashboardRange(req.query);
+    const khoFilter = resolveDashboardKhoFilter(req, req.query.kho);
 
     const includeMin = [
       { model: Vehicle, attributes: VEHICLE_MIN_ATTRS },
       { model: Driver, attributes: DRIVER_MIN_ATTRS },
     ];
 
+    const rangeWhere = applyWarehouseScope(req, {
+      ngay: { [Op.between]: [from, to] },
+    });
+    if (khoFilter) rangeWhere.kho = khoFilter;
+
     const todayAssignments = await Assignment.findAll({
-      where: applyWarehouseScope(req, { ngay: todayStr }),
+      where: rangeWhere,
       attributes: ASSIGNMENT_STATS_ATTRS,
       include: includeMin,
       order: [["updatedAt", "DESC"]],
     });
+    const pendingWhere = applyWarehouseScope(req, {
+      warehouseStatus: "Chờ xác nhận",
+      ngay: { [Op.between]: [from, to] },
+    });
+    if (khoFilter) pendingWhere.kho = khoFilter;
     const pendingWarehouse = await Assignment.findAll({
-      where: applyWarehouseScope(req, {
-        warehouseStatus: "Chờ xác nhận",
-      }),
+      where: pendingWhere,
       attributes: ASSIGNMENT_STATS_ATTRS,
       include: includeMin,
       order: [["checkOutTime", "DESC"]],

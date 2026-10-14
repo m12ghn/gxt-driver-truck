@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,6 +14,13 @@ import {
   IconButton,
   Tooltip,
   alpha,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
 } from "@mui/material";
 
 import { LineChart } from "@mui/x-charts/LineChart";
@@ -35,8 +42,15 @@ import WarehouseIcon from "@mui/icons-material/Warehouse";
 
 import StatCard from "../components/StatCard";
 import { getDashboardStats, getAlerts } from "../api/statsApi";
+import { getWarehouses } from "../api/warehouseApi";
 import { brand } from "../theme/brand";
-import { formatKhoLabel } from "../constants/warehouses";
+import {
+  formatKhoLabel,
+  officialWarehouseNames,
+  parseKhoList,
+  shortKhoName,
+  warehouses as fallbackWarehouses,
+} from "../constants/warehouses";
 
 const REFRESH_MS = 45000;
 
@@ -131,6 +145,19 @@ function groupAlertsByWarehouse(groups = []) {
   });
 }
 
+function vietnamToday() {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+}
+
+function formatVnDate(iso) {
+  const text = String(iso || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return "";
+  const [year, month, day] = text.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 function SectionHeading({ children, sx }) {
   return (
     <Typography
@@ -152,7 +179,16 @@ function SectionHeading({ children, sx }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
+  const today = vietnamToday();
+  const isWarehouse = user?.quyen === "WAREHOUSE";
+  const managedKhoList = parseKhoList(user?.khoList || user?.kho);
 
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
+  const [selectedKho, setSelectedKho] = useState([]);
+  const [khoOptions, setKhoOptions] = useState(
+    isWarehouse && managedKhoList.length ? managedKhoList : fallbackWarehouses
+  );
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState({ counts: {}, items: [] });
   const [loading, setLoading] = useState(true);
@@ -160,31 +196,54 @@ export default function Dashboard() {
   const [refreshedAt, setRefreshedAt] = useState(null);
   const [expandedKho, setExpandedKho] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    getWarehouses()
+      .then((res) => {
+        const list = officialWarehouseNames(res.data?.data || []);
+        if (isWarehouse && managedKhoList.length) {
+          setKhoOptions(
+            list.filter((name) =>
+              managedKhoList.some(
+                (item) => item === name || shortKhoName(item) === shortKhoName(name)
+              )
+            )
+          );
+        } else if (list.length) {
+          setKhoOptions(list);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     loadAll(true);
 
     const timer = setInterval(() => loadAll(false), REFRESH_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [fromDate, toDate, selectedKho]);
 
   async function loadAll(isFirst = false) {
-    if (isFirst) setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     else setRefreshing(true);
 
+    const khoQuery = selectedKho.length ? selectedKho.join("|") : undefined;
+
     try {
-      const statsRes = await getDashboardStats();
+      const statsRes = await getDashboardStats(fromDate, toDate, khoQuery);
       setStats(statsRes.data.data);
       setLoadError("");
       setLoading(false);
 
       try {
-        const alertsRes = await getAlerts();
+        const alertsRes = await getAlerts(fromDate, toDate, khoQuery);
         setAlerts(alertsRes.data.data || { counts: {}, items: [] });
       } catch (alertErr) {
         console.error(alertErr);
       }
       setRefreshedAt(new Date());
+      hasLoadedRef.current = true;
     } catch (err) {
       console.error(err);
       const timedOut = err.code === "ECONNABORTED";
@@ -222,10 +281,17 @@ export default function Dashboard() {
   }
 
   const { today, vehicles, drivers, trend } = stats;
+  const rangeFrom = stats.from || fromDate;
+  const rangeTo = stats.to || toDate;
+  const periodLabel =
+    rangeFrom === rangeTo
+      ? formatVnDate(rangeFrom)
+      : `${formatVnDate(rangeFrom)} – ${formatVnDate(rangeTo)}`;
+  const isSingleDay = rangeFrom === rangeTo;
 
   const overviewCards = [
     {
-      title: "Tổng chuyến hôm nay",
+      title: isSingleDay ? "Tổng chuyến trong ngày" : "Tổng chuyến",
       value: today.total,
       icon: <AssignmentTurnedInIcon />,
       color: brand.teal,
@@ -284,7 +350,7 @@ export default function Dashboard() {
       value: alertCounts.choXacNhan ?? today.choXacNhan,
       icon: <HourglassEmptyIcon />,
       color: "#6a1b9a",
-      hint: "còn pending (mọi ngày)",
+      hint: "còn pending trong khoảng đã chọn",
     },
   ];
 
@@ -352,17 +418,17 @@ export default function Dashboard() {
 
             <Typography sx={{ opacity: 0.85, mt: 0.5 }}>
               Tổng quan hoạt động
-              {user?.quyen === "WAREHOUSE" &&
-              formatKhoLabel(stats.khoList || stats.kho || user?.khoList || user?.kho)
-                ? ` ${formatKhoLabel(stats.khoList || stats.kho || user?.khoList || user?.kho)}`
+              {selectedKho.length
+                ? ` · ${selectedKho.map(shortKhoName).join(" · ")}`
+                : user?.quyen === "WAREHOUSE" &&
+                  formatKhoLabel(
+                    stats.khoList || stats.kho || user?.khoList || user?.kho
+                  )
+                ? ` ${formatKhoLabel(
+                    stats.khoList || stats.kho || user?.khoList || user?.kho
+                  )}`
                 : ""}{" "}
-              ngày{" "}
-              {new Date().toLocaleDateString("vi-VN", {
-                weekday: "long",
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })}
+              {isSingleDay ? "ngày" : "từ"} {periodLabel}
             </Typography>
           </Box>
 
@@ -408,7 +474,98 @@ export default function Dashboard() {
           borderColor: "grey.200",
         }}
       >
-        <SectionHeading>Tình trạng chuyến hôm nay</SectionHeading>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          useFlexGap
+          alignItems="center"
+        >
+          <TextField
+            type="date"
+            size="small"
+            label="Từ ngày"
+            InputLabelProps={{ shrink: true }}
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value || today)}
+          />
+          <TextField
+            type="date"
+            size="small"
+            label="Đến ngày"
+            InputLabelProps={{ shrink: true }}
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value || today)}
+          />
+          {isWarehouse && khoOptions.length <= 1 ? (
+            <TextField
+              size="small"
+              label="Kho"
+              value={formatKhoLabel(khoOptions) || "Chưa gán kho"}
+              InputProps={{ readOnly: true }}
+              sx={{ minWidth: 200, maxWidth: 320 }}
+            />
+          ) : (
+            <FormControl size="small" sx={{ minWidth: 260, maxWidth: 420 }}>
+              <InputLabel id="dashboard-kho-label">Kho</InputLabel>
+              <Select
+                labelId="dashboard-kho-label"
+                multiple
+                displayEmpty
+                label="Kho"
+                value={selectedKho}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setSelectedKho(Array.isArray(next) ? next : parseKhoList(next));
+                }}
+                renderValue={(selected) =>
+                  selected.length
+                    ? selected.map(shortKhoName).join(" · ")
+                    : "Tất cả kho"
+                }
+              >
+                {khoOptions.map((item) => (
+                  <MenuItem key={item} value={item}>
+                    <Checkbox checked={selectedKho.includes(item)} />
+                    <ListItemText
+                      primary={shortKhoName(item)}
+                      secondary={item}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Stack>
+        {selectedKho.length > 0 && (
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap mt={1.25}>
+            {selectedKho.map((kho) => (
+              <Chip
+                key={kho}
+                size="small"
+                label={shortKhoName(kho)}
+                onDelete={() =>
+                  setSelectedKho((prev) => prev.filter((item) => item !== kho))
+                }
+              />
+            ))}
+          </Stack>
+        )}
+      </Paper>
+
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 1.5,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "grey.200",
+        }}
+      >
+        <SectionHeading>
+          Tình trạng chuyến {isSingleDay ? "trong ngày" : "theo khoảng ngày"}
+        </SectionHeading>
 
         <Grid container spacing={1.25} mb={1.5}>
           {overviewCards.map((card) => (
@@ -804,7 +961,7 @@ export default function Dashboard() {
           <ShowChartIcon color="primary" />
 
           <Typography variant="h6" fontWeight="bold">
-            Xu hướng 7 ngày gần nhất
+            Xu hướng theo ngày ({periodLabel})
           </Typography>
         </Stack>
 
