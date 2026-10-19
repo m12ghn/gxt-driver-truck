@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   getVehicles,
   deleteVehicle,
@@ -124,6 +125,37 @@ export default function Vehicle() {
     }
   }
 
+  function handleExport() {
+    const rows = filteredVehicles.map((vehicle) => {
+      const trip = vehicle.lichHomNay;
+      const active = liveStatus(vehicle) === "Hoạt động";
+      const detail = trip
+        ? [trip.ca, trip.taiXe || trip.msnv, trip.trangThai]
+            .filter(Boolean)
+            .join(" · ")
+        : "";
+
+      return {
+        ID: vehicle.id,
+        "Biển số": vehicle.bienSo,
+        "Loại xe": vehicle.loaiXe,
+        Kho: vehicle.kho,
+        "Km hiện tại": vehicle.kmHienTai,
+        "Trạng thái hôm nay":
+          active && detail ? `Hoạt động - ${detail}` : liveStatus(vehicle),
+        "Ghi chú": vehicle.ghiChu,
+      };
+    });
+
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    sheet["!cols"] = [8, 16, 18, 22, 14, 40, 30].map((wch) => ({ wch }));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "Danh sách xe");
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `danh-sach-xe-${today}.xlsx`);
+  }
+
   async function handleImport(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -216,6 +248,14 @@ export default function Vehicle() {
               accept=".xlsx,.xls"
               onChange={handleImport}
             />
+          </Button>
+
+          <Button
+            variant="outlined"
+            onClick={handleExport}
+            disabled={filteredVehicles.length === 0}
+          >
+            XUẤT EXCEL
           </Button>
 
           <Button variant="contained" onClick={handleAdd}>
