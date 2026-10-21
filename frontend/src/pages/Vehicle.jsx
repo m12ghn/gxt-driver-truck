@@ -32,6 +32,21 @@ function liveStatus(vehicle) {
     (vehicle.coLichHomNay ? "Hoạt động" : "Không hoạt động");
 }
 
+function formatOdoDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 function ActiveDot() {
   return (
     <Box
@@ -141,6 +156,7 @@ export default function Vehicle() {
         "Loại xe": vehicle.loaiXe,
         Kho: vehicle.kho,
         "Km hiện tại": vehicle.kmHienTai,
+        "Ngày cập nhật ODO gần nhất": formatOdoDate(vehicle.odoUpdatedAt),
         "Trạng thái hôm nay":
           active && detail ? `Hoạt động - ${detail}` : liveStatus(vehicle),
         "Ghi chú": vehicle.ghiChu,
@@ -148,7 +164,7 @@ export default function Vehicle() {
     });
 
     const sheet = XLSX.utils.json_to_sheet(rows);
-    sheet["!cols"] = [8, 16, 18, 22, 14, 40, 30].map((wch) => ({ wch }));
+    sheet["!cols"] = [8, 16, 18, 22, 14, 24, 40, 30].map((wch) => ({ wch }));
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, sheet, "Danh sách xe");
 
@@ -312,6 +328,7 @@ export default function Vehicle() {
               <TableCell>Loại xe</TableCell>
               <TableCell>Kho</TableCell>
               <TableCell>Km hiện tại</TableCell>
+              <TableCell>Ngày cập nhật ODO gần nhất</TableCell>
               <TableCell>Trạng thái hôm nay</TableCell>
               <TableCell>Ghi chú</TableCell>
               <TableCell align="center">Thao tác</TableCell>
@@ -321,7 +338,7 @@ export default function Vehicle() {
           <TableBody>
             {filteredVehicles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
+                <TableCell colSpan={9} align="center">
                   {keyword || statusFilter
                     ? "Không tìm thấy xe phù hợp."
                     : "Chưa có xe."}
@@ -354,6 +371,7 @@ export default function Vehicle() {
                 <TableCell>{vehicle.loaiXe}</TableCell>
                 <TableCell>{vehicle.kho}</TableCell>
                 <TableCell>{vehicle.kmHienTai}</TableCell>
+                <TableCell>{formatOdoDate(vehicle.odoUpdatedAt)}</TableCell>
                 <TableCell>
                   {active ? (
                     <Stack spacing={0.6} alignItems="flex-start">

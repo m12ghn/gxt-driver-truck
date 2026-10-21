@@ -1,3 +1,4 @@
+const sequelize = require("../database/database");
 const Vehicle = require("../models/Vehicle");
 const Assignment = require("../models/Assignment");
 const Driver = require("../models/Driver");
@@ -23,6 +24,26 @@ exports.getVehicles = async (req, res) => {
       ],
     });
 
+    // Thời điểm cập nhật ODO gần nhất: cùng chuyến mà kmHienTai được lấy
+    // (xem syncVehicleKm.js) -> giờ Check Out nếu có ODO Check Out, không thì Check In.
+    const [odoRows] = await sequelize.query(`
+      SELECT DISTINCT ON ("vehicleId")
+        "vehicleId",
+        CASE WHEN "odoCheckOut" IS NOT NULL THEN "checkOutTime" ELSE "checkInTime" END AS "odoUpdatedAt",
+        "ngay"
+      FROM "Assignments"
+      WHERE "odoCheckOut" IS NOT NULL OR "odoCheckIn" IS NOT NULL
+      ORDER BY
+        "vehicleId",
+        "ngay" DESC NULLS LAST,
+        COALESCE("checkOutTime", "checkInTime") DESC NULLS LAST,
+        "id" DESC
+    `);
+    const odoByVehicle = new Map();
+    for (const row of odoRows) {
+      odoByVehicle.set(Number(row.vehicleId), row.odoUpdatedAt || row.ngay);
+    }
+
     const tripByVehicle = new Map();
     for (const trip of todayTrips) {
       tripByVehicle.set(Number(trip.vehicleId), trip);
@@ -31,6 +52,7 @@ exports.getVehicles = async (req, res) => {
     const data = vehicles.map((vehicle) => {
       const item = vehicle.toJSON();
       const trip = tripByVehicle.get(Number(vehicle.id));
+      item.odoUpdatedAt = odoByVehicle.get(Number(vehicle.id)) || null;
       item.coLichHomNay = Boolean(trip);
       item.trangThaiHomNay = trip ? "Hoạt động" : "Không hoạt động";
       item.lichHomNay = trip
