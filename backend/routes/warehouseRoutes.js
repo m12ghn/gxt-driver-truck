@@ -3,10 +3,11 @@ const router = express.Router();
 
 const warehouseController = require("../controllers/warehouseController");
 const attachUser = require("../middlewares/attachUser");
+const { requireAuth, requireRole } = require("../middlewares/auth");
 
-router.use(attachUser);
+router.use(requireAuth, requireRole("SUPER_ADMIN", "ADMIN", "WAREHOUSE"), attachUser);
 
 router.get("/", warehouseController.getWarehouses);
-router.put("/:id", warehouseController.updateWarehouse);
+router.put("/:id", requireRole("SUPER_ADMIN", "ADMIN"), warehouseController.updateWarehouse);
 
 module.exports = router;

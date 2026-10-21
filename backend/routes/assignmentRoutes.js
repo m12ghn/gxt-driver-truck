@@ -9,20 +9,28 @@ const {
   optionalMultipart,
 } = require("../middlewares/uploadDriverPhotos");
 const attachUser = require("../middlewares/attachUser");
+const {
+  requireDriverPortalAuth,
+  requireRole,
+  driverSelfOnly,
+} = require("../middlewares/auth");
+
+const adminSide = requireRole("SUPER_ADMIN", "ADMIN", "WAREHOUSE");
 
 // Gắn user admin/kho (driver portal không gửi header → req.user = null)
-router.use(attachUser);
+router.use(requireDriverPortalAuth, attachUser);
 
 // ==============================
 // Driver - Lấy phân công hôm nay
 // ==============================
-router.get("/today/:msnv", assignmentController.getTodayAssignment);
+router.get("/today/:msnv", driverSelfOnly, assignmentController.getTodayAssignment);
 
 // ==============================
 // Driver Portal - Lịch sử chuyến
 // ==============================
 router.get(
   "/history/:msnv",
+  driverSelfOnly,
   driverPortalController.getAssignmentHistory
 );
 
@@ -63,13 +71,14 @@ router.get(
 // ==============================
 // Admin - Danh sách phân công hôm nay
 // ==============================
-router.get("/today", assignmentController.getTodayAssignments);
+router.get("/today", adminSide, assignmentController.getTodayAssignments);
 
 // ==============================
 // CHECK IN
 // ==============================
 router.put(
   "/:id/checkin",
+  adminSide,
   assignmentController.checkIn
 );
 
@@ -78,6 +87,7 @@ router.put(
 // ==============================
 router.put(
   "/:id/checkout",
+  adminSide,
   assignmentController.checkOut
 );
 
@@ -86,6 +96,7 @@ router.put(
 // ==============================
 router.put(
   "/:id/admin-checkout",
+  adminSide,
   assignmentController.adminCheckOut
 );
 
@@ -94,32 +105,33 @@ router.put(
 // ==============================
 router.put(
   "/:id/warehouse-confirm",
+  adminSide,
   assignmentController.confirmWarehouse
 );
 
 // ==============================
 // Xuất Excel danh sách phân công
 // ==============================
-router.get("/export", assignmentController.exportExcel);
+router.get("/export", adminSide, assignmentController.exportExcel);
 
 // ==============================
 // Danh sách tất cả phân công
 // ==============================
-router.get("/", assignmentController.getAssignments);
+router.get("/", adminSide, assignmentController.getAssignments);
 
 // ==============================
 // Thêm phân công
 // ==============================
-router.post("/", assignmentController.createAssignment);
+router.post("/", adminSide, assignmentController.createAssignment);
 
 // ==============================
 // Cập nhật phân công
 // ==============================
-router.put("/:id", assignmentController.updateAssignment);
+router.put("/:id", adminSide, assignmentController.updateAssignment);
 
 // ==============================
 // Xóa phân công
 // ==============================
-router.delete("/:id", assignmentController.deleteAssignment);
+router.delete("/:id", adminSide, assignmentController.deleteAssignment);
 
 module.exports = router;

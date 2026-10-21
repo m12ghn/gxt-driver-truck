@@ -36,7 +36,23 @@ const app = express();
 // ==============================
 // Middleware
 // ==============================
-app.use(cors());
+// CORS_ORIGINS="https://a.vercel.app,https://b.vercel.app" để giới hạn domain.
+// Chưa cấu hình thì giữ hành vi cũ (cho phép tất cả) để không làm gián đoạn.
+const corsOrigins = String(process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
+
+app.use(
+  cors(
+    corsOrigins.length
+      ? {
+          origin: (origin, cb) =>
+            cb(null, !origin || corsOrigins.includes(origin)),
+        }
+      : undefined
+  )
+);
 app.use(express.json());
 
 function skipDatabase(req) {

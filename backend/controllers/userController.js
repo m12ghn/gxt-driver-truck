@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const { parseKhoList, serializeKhoList } = require("../utils/scopeHelpers");
 const { ensureUserKhoColumn } = require("../utils/ensureUserKhoColumn");
+const { hashPassword } = require("../utils/password");
 
 function resolveWarehouseKho(quyen, kho) {
   if (quyen !== "WAREHOUSE") return null;
@@ -88,7 +89,7 @@ exports.create = async (req, res) => {
       soDienThoai,
 
       // Mật khẩu mặc định = MSNV
-      matKhau: msnv,
+      matKhau: hashPassword(msnv),
 
       quyen,
       kho: resolveWarehouseKho(quyen, kho),
@@ -181,7 +182,7 @@ exports.update = async (req, res) => {
       soDienThoai,
 
       // Luôn đồng bộ mật khẩu = MSNV
-      matKhau: msnv,
+      matKhau: hashPassword(msnv),
 
       quyen,
       kho: resolveWarehouseKho(quyen, kho),

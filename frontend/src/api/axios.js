@@ -9,6 +9,17 @@ const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Token hết hạn / không hợp lệ -> về trang đăng nhập (trừ chính request đăng nhập)
+    if (
+      err.response?.status === 401 &&
+      !String(err.config?.url || "").includes("/auth/") &&
+      localStorage.getItem("user")
+    ) {
+      localStorage.removeItem("user");
+      window.location.assign("/");
+      return Promise.reject(err);
+    }
+
     if (!err.response && (err.code === "ECONNABORTED" || /timeout/i.test(err.message || ""))) {
       const url = String(err.config?.url || "");
       err.response = {
@@ -28,6 +39,9 @@ api.interceptors.request.use((config) => {
     const raw = localStorage.getItem("user");
     if (raw) {
       const user = JSON.parse(raw);
+      if (user?.token) {
+        config.headers.Authorization = `Bearer ${user.token}`;
+      }
       if (user?.msnv) {
         config.headers["x-user-msnv"] = user.msnv;
       }
