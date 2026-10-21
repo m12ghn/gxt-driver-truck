@@ -477,6 +477,12 @@ export default function Dashboard() {
               color: brand.ink,
             },
             "& .MuiInputLabel-root": { color: brand.gray },
+            // Nhãn nổi trên viền: thêm nền trắng để không bị chìm vào banner tối
+            "& .MuiInputLabel-shrink": {
+              bgcolor: "#fff",
+              px: 0.75,
+              borderRadius: 0.5,
+            },
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: "rgba(0,0,0,0.23)",
             },
@@ -515,11 +521,14 @@ export default function Dashboard() {
               size="small"
               sx={{ minWidth: 260, maxWidth: 420, bgcolor: "#fff", borderRadius: 1 }}
             >
-              <InputLabel id="dashboard-kho-label">Kho</InputLabel>
+              <InputLabel id="dashboard-kho-label" shrink>
+                Kho
+              </InputLabel>
               <Select
                 labelId="dashboard-kho-label"
                 multiple
                 displayEmpty
+                notched
                 label="Kho"
                 value={selectedKho}
                 onChange={(e) => {
