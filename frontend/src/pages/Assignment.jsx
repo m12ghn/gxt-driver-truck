@@ -1099,7 +1099,7 @@ export default function Assignment() {
                     maxHeight: 240,
                     overflow: "auto",
                     p: 1.5,
-                    bgcolor: "grey.50",
+                    bgcolor: "action.hover",
                     borderRadius: 1,
                     whiteSpace: "pre-wrap",
                     fontSize: 13,

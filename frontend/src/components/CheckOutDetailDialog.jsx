@@ -189,7 +189,7 @@ export default function CheckOutDetailDialog({
                           aspectRatio: "1 / 1",
                           objectFit: "cover",
                           borderRadius: 1,
-                          border: "1px solid #eee",
+                          border: "1px solid", borderColor: "divider",
                         }}
                       />
                     </Box>

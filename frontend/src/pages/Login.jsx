@@ -107,7 +107,7 @@ export default function Login() {
           alignItems: "center",
           justifyContent: "center",
           p: { xs: 2.5, md: 5 },
-          bgcolor: brand.bg,
+          bgcolor: "background.default",
         }}
       >
         <Paper
@@ -117,7 +117,8 @@ export default function Login() {
             maxWidth: 420,
             p: { xs: 3, md: 4.5 },
             borderRadius: 3,
-            border: `1px solid ${brand.border}`,
+            border: "1px solid",
+            borderColor: "divider",
         }}
       >
         <Stack spacing={1} mb={3.5} alignItems="flex-start">

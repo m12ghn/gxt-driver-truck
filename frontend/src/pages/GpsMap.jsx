@@ -148,14 +148,16 @@ export default function GpsMap() {
   }
 
   return (
-    <Box sx={{ pb: 2 }}>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <Box sx={{ flexShrink: 0 }}>
       <Paper
         elevation={0}
         sx={{
           p: 2.5,
           mb: 2,
           borderRadius: 3,
-          border: `1px solid ${brand.border}`,
+          border: "1px solid",
+          borderColor: "divider",
         }}
       >
         <Stack
@@ -265,13 +267,16 @@ export default function GpsMap() {
           />
         </Stack>
       </Paper>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pb: 2 }}>
 
       <Paper
         elevation={0}
         sx={{
           borderRadius: 3,
           overflow: "hidden",
-          border: `1px solid ${brand.border}`,
+          border: "1px solid",
+          borderColor: "divider",
           height: { xs: 420, md: 560 },
           "& .leaflet-container": { height: "100%", width: "100%" },
         }}
@@ -341,6 +346,7 @@ export default function GpsMap() {
           Hôm nay chưa có điểm Check In/Out để hiển thị trên bản đồ.
         </Typography>
       )}
+      </Box>
     </Box>
   );
 }

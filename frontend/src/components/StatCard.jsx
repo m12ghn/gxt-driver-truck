@@ -10,7 +10,7 @@ export default function StatCard({ title, value, icon, color, hint }) {
         py: 1.25,
         borderRadius: 2.5,
         border: "1px solid",
-        borderColor: "grey.200",
+        borderColor: "divider",
         transition: "all 0.2s ease",
         "&:hover": {
           boxShadow: "0 6px 18px rgba(0,0,0,0.06)",

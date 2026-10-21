@@ -235,7 +235,8 @@ export default function Report() {
   )} – ${new Date(toDate + "T00:00:00").toLocaleDateString("vi-VN")}`;
 
   return (
-    <Box sx={{ pb: 2 }}>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <Box sx={{ flexShrink: 0 }}>
       <Paper
         elevation={0}
         sx={{
@@ -322,7 +323,8 @@ export default function Report() {
           p: 2,
           mb: 2.5,
           borderRadius: 3,
-          border: `1px solid ${brand.border}`,
+          border: "1px solid",
+              borderColor: "divider",
         }}
       >
         <Stack
@@ -369,6 +371,8 @@ export default function Report() {
           </TextField>
         </Stack>
       </Paper>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pb: 2 }}>
 
       {loading && (
         <Box display="flex" justifyContent="center" mt={4}>
@@ -405,12 +409,13 @@ export default function Report() {
             sx={{
               mb: 4,
               borderRadius: 3,
-              border: `1px solid ${brand.border}`,
+              border: "1px solid",
+              borderColor: "divider",
               overflow: "hidden",
             }}
           >
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ maxHeight: 520 }}>
+              <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: alpha(brand.teal, 0.06) }}>
                     <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -523,12 +528,13 @@ export default function Report() {
             elevation={0}
             sx={{
               borderRadius: 3,
-              border: `1px solid ${brand.border}`,
+              border: "1px solid",
+              borderColor: "divider",
               overflow: "hidden",
             }}
           >
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ maxHeight: 520 }}>
+              <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: alpha(brand.teal, 0.06) }}>
                     <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
@@ -629,6 +635,7 @@ export default function Report() {
           </Paper>
         </>
       )}
+      </Box>
     </Box>
   );
 }

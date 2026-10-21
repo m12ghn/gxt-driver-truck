@@ -1,9 +1,20 @@
 import { createTheme } from "@mui/material/styles";
 import { brand } from "./brand";
 
-const theme = createTheme({
+const darkTokens = {
+  bg: "#0E1113",
+  paper: "#171B1E",
+  ink: "#E8EAED",
+  gray: "#9AA3AD",
+  border: "#2A3036",
+};
+
+export const createAppTheme = (mode = "light") => {
+  const dark = mode === "dark";
+
+  return createTheme({
   palette: {
-    mode: "light",
+    mode,
     primary: {
       main: brand.teal,
       dark: brand.tealDark,
@@ -15,13 +26,14 @@ const theme = createTheme({
       contrastText: brand.white,
     },
     background: {
-      default: brand.bg,
-      paper: brand.white,
+      default: dark ? darkTokens.bg : brand.bg,
+      paper: dark ? darkTokens.paper : brand.white,
     },
     text: {
-      primary: brand.ink,
-      secondary: brand.gray,
+      primary: dark ? darkTokens.ink : brand.ink,
+      secondary: dark ? darkTokens.gray : brand.gray,
     },
+    divider: dark ? darkTokens.border : brand.border,
     success: { main: "#2E7D32" },
     warning: { main: "#ED6C02" },
     error: { main: "#D32F2F" },
@@ -96,6 +108,7 @@ const theme = createTheme({
       },
     },
   },
-});
+  });
+};
 
-export default theme;
+export default createAppTheme("light");

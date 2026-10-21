@@ -25,6 +25,7 @@ import {
   TextField,
   Chip,
   TableContainer,
+  alpha,
 } from "@mui/material";
 
 function liveStatus(vehicle) {
@@ -360,7 +361,7 @@ export default function Vehicle() {
                 sx={
                   active
                     ? {
-                        bgcolor: brand.tealSoft,
+                        bgcolor: alpha(brand.teal, 0.1),
                         "& td": { borderColor: "rgba(15,155,148,0.12)" },
                       }
                     : undefined
@@ -402,7 +403,7 @@ export default function Vehicle() {
                       size="small"
                       variant="outlined"
                       label="Không hoạt động"
-                      sx={{ color: brand.gray, borderColor: brand.border }}
+                      sx={{ color: "text.secondary", borderColor: "divider" }}
                     />
                   )}
                 </TableCell>

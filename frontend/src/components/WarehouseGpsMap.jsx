@@ -86,9 +86,9 @@ export default function WarehouseGpsMap({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "#f5f5f5",
+          bgcolor: "action.hover",
           borderRadius: 2,
-          border: "1px dashed #ddd",
+          border: "1px dashed", borderColor: "divider",
         }}
       >
         <Typography variant="body2" color="text.secondary">
@@ -126,7 +126,7 @@ export default function WarehouseGpsMap({
           height,
           borderRadius: 2,
           overflow: "hidden",
-          border: "1px solid #e5e7eb",
+          border: "1px solid", borderColor: "divider",
           "& .leaflet-container": { height: "100%", width: "100%", fontFamily: "inherit" },
         }}
       >

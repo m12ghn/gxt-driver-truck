@@ -13,6 +13,7 @@ import {
   Paper,
   Stack,
   Divider,
+  alpha,
 } from "@mui/material";
 
 import LoginIcon from "@mui/icons-material/Login";
@@ -95,7 +96,7 @@ function PhotoGrid({ photos }) {
                     aspectRatio: "1 / 1",
                     objectFit: "cover",
                     borderRadius: 1.5,
-                    border: "1px solid #eee",
+                    border: "1px solid", borderColor: "divider",
                     display: "block",
                     transition: "opacity 0.15s",
                     "&:hover": { opacity: 0.85 },
@@ -108,11 +109,11 @@ function PhotoGrid({ photos }) {
                   width: "100%",
                   aspectRatio: "1 / 1",
                   borderRadius: 1.5,
-                  bgcolor: "#f5f5f5",
+                  bgcolor: "action.hover",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  border: "1px dashed #ddd",
+                  border: "1px dashed", borderColor: "divider",
                 }}
               >
                 <Typography variant="caption" color="text.secondary">
@@ -153,7 +154,7 @@ function CheckSection({
         height: "100%",
         borderRadius: 3,
         border: "1px solid",
-        borderColor: "grey.200",
+        borderColor: "divider",
         borderTop: `4px solid ${accentColor}`,
       }}
     >
@@ -306,9 +307,9 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
             p: 2.5,
             mb: 3,
             borderRadius: 3,
-            bgcolor: "#f8fafc",
+            bgcolor: "action.hover",
             border: "1px solid",
-            borderColor: "grey.200",
+            borderColor: "divider",
           }}
         >
           <Grid container spacing={2}>
@@ -412,7 +413,7 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
               mb: 3,
               borderRadius: 3,
               border: "1px solid",
-              borderColor: "grey.200",
+              borderColor: "divider",
             }}
           >
             <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
@@ -452,7 +453,7 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
               mb: 3,
               borderRadius: 3,
               border: "1px solid",
-              borderColor: "grey.200",
+              borderColor: "divider",
             }}
           >
             <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
@@ -467,8 +468,8 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
                     p: 1.5,
                     borderRadius: 2,
                     border: "1px solid",
-                    borderColor: "grey.200",
-                    bgcolor: "#fffaf5",
+                    borderColor: "divider",
+                    bgcolor: (t) => alpha("#ef6c00", t.palette.mode === "dark" ? 0.1 : 0.05),
                   }}
                 >
                   <Stack
@@ -516,7 +517,7 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
                           height: 72,
                           objectFit: "cover",
                           borderRadius: 1.5,
-                          border: "1px solid #eee",
+                          border: "1px solid", borderColor: "divider",
                           }}
                         />
                       </Box>

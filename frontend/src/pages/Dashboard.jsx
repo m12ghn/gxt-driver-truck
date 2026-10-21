@@ -380,7 +380,8 @@ export default function Dashboard() {
       : 0;
 
   return (
-    <Box sx={{ pb: 2 }}>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+      <Box sx={{ flexShrink: 0 }}>
       <Paper
         elevation={0}
         sx={{
@@ -469,7 +470,19 @@ export default function Dashboard() {
           flexWrap="wrap"
           useFlexGap
           alignItems="center"
-          sx={{ mt: 2 }}
+          sx={{
+            mt: 2,
+            // Ô lọc nền trắng nằm trên banner tối: giữ chữ tối ở cả 2 chế độ
+            "& .MuiInputBase-root, & .MuiInputBase-input, & .MuiSelect-select": {
+              color: brand.ink,
+            },
+            "& .MuiInputLabel-root": { color: brand.gray },
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: "rgba(0,0,0,0.23)",
+            },
+            "& .MuiSvgIcon-root": { color: brand.gray },
+            "& input[type=date]": { colorScheme: "light" },
+          }}
         >
           <TextField
             type="date"
@@ -542,12 +555,14 @@ export default function Dashboard() {
                 onDelete={() =>
                   setSelectedKho((prev) => prev.filter((item) => item !== kho))
                 }
-                sx={{ bgcolor: "rgba(255,255,255,0.92)" }}
+                sx={{ bgcolor: "rgba(255,255,255,0.92)", color: brand.ink }}
               />
             ))}
           </Stack>
         )}
       </Paper>
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pb: 2 }}>
 
       <Paper
         elevation={0}
@@ -556,7 +571,7 @@ export default function Dashboard() {
           mb: 1.5,
           borderRadius: 3,
           border: "1px solid",
-          borderColor: "grey.200",
+          borderColor: "divider",
         }}
       >
         <SectionHeading>
@@ -636,8 +651,8 @@ export default function Dashboard() {
                       py: 1.25,
                       borderRadius: 2,
                       border: "1px solid",
-                      borderColor: "grey.200",
-                      bgcolor: "#fff",
+                      borderColor: "divider",
+                      bgcolor: "background.paper",
                     }}
                   >
                     <Stack
@@ -834,7 +849,7 @@ export default function Dashboard() {
               p: 2.5,
               borderRadius: 3,
               border: "1px solid",
-              borderColor: "grey.200",
+              borderColor: "divider",
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2} mb={1.5}>
@@ -892,7 +907,7 @@ export default function Dashboard() {
               p: 2.5,
               borderRadius: 3,
               border: "1px solid",
-              borderColor: "grey.200",
+              borderColor: "divider",
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2} mb={1.5}>
@@ -950,7 +965,7 @@ export default function Dashboard() {
           p: 3,
           borderRadius: 3,
           border: "1px solid",
-          borderColor: "grey.200",
+          borderColor: "divider",
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1} mb={2}>
@@ -994,6 +1009,7 @@ export default function Dashboard() {
           margin={{ left: 40 }}
         />
       </Paper>
+      </Box>
     </Box>
   );
 }

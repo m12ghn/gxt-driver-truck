@@ -19,6 +19,9 @@ import {
   Divider,
   Button,
   Badge,
+  IconButton,
+  Tooltip,
+  alpha,
 } from "@mui/material";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -31,10 +34,13 @@ import PeopleIcon from "@mui/icons-material/People";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import MapIcon from "@mui/icons-material/Map";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 
 import GhnLogo from "../components/GhnLogo";
 import { getAlerts } from "../api/statsApi";
 import { brand } from "../theme/brand";
+import { useColorMode } from "../theme/ColorModeContext";
 
 const drawerWidth = 220;
 const ALERT_POLL_MS = 45000;
@@ -42,6 +48,7 @@ const ALERT_POLL_MS = 45000;
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { mode, toggleColorMode } = useColorMode();
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -166,7 +173,7 @@ export default function MainLayout() {
         inset: 0,
         display: "flex",
         overflow: "hidden",
-        bgcolor: brand.bg,
+        bgcolor: "background.default",
       }}
     >
       <Box
@@ -283,7 +290,7 @@ export default function MainLayout() {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          bgcolor: brand.bg,
+          bgcolor: "background.default",
         }}
       >
         <AppBar
@@ -291,9 +298,10 @@ export default function MainLayout() {
           elevation={0}
           sx={{
             flexShrink: 0,
-            bgcolor: brand.white,
-            color: brand.ink,
-            borderBottom: `1px solid ${brand.border}`,
+            bgcolor: "background.paper",
+            color: "text.primary",
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           <Toolbar sx={{ minHeight: 72 }}>
@@ -310,6 +318,16 @@ export default function MainLayout() {
             </Box>
 
             <Stack direction="row" spacing={2} alignItems="center" flexShrink={0}>
+              <Tooltip title={mode === "dark" ? "Chế độ sáng" : "Chế độ tối"}>
+                <IconButton
+                  onClick={toggleColorMode}
+                  aria-label="Chuyển chế độ Sáng/Tối"
+                  sx={{ color: "text.primary" }}
+                >
+                  {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
+                </IconButton>
+              </Tooltip>
+
               <Avatar
                 sx={{
                   bgcolor: brand.teal,
@@ -332,12 +350,12 @@ export default function MainLayout() {
                 variant="outlined"
                 onClick={handleLogout}
                 sx={{
-                  borderColor: brand.border,
-                  color: brand.ink,
+                  borderColor: "divider",
+                  color: "text.primary",
                   "&:hover": {
                     borderColor: brand.teal,
                     color: brand.teal,
-                    bgcolor: brand.tealSoft,
+                    bgcolor: alpha(brand.teal, 0.1),
                   },
                 }}
               >
