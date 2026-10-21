@@ -169,10 +169,10 @@ export default function UserTable({
     <DataGrid
       rows={users}
       columns={columns}
-      autoHeight
       getRowHeight={() => "auto"}
       pageSizeOptions={[10, 20, 50]}
       sx={{
+        height: "100%",
         "& .MuiDataGrid-cell": {
           py: 1,
           display: "flex",

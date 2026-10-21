@@ -235,7 +235,9 @@ export default function Vehicle() {
   const idleCount = vehicles.length - activeCount;
 
   return (
-    <Box>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+
+      <Box sx={{ flexShrink: 0 }}>
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -318,9 +320,11 @@ export default function Vehicle() {
         sx={{ width: 380, mb: 2, maxWidth: "100%" }}
       />
 
-      <Paper sx={{ overflow: "hidden" }}>
-        <TableContainer sx={{ overflowX: "auto" }}>
-        <Table>
+      </Box>
+
+      <Paper sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <TableContainer sx={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        <Table stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>

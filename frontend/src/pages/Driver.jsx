@@ -169,7 +169,9 @@ export default function Driver() {
 
   return (
 
-    <Box>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+
+      <Box sx={{ flexShrink: 0 }}>
 
       <Stack
         direction="row"
@@ -218,9 +220,12 @@ export default function Driver() {
         sx={{ width: 360, mb: 2 }}
       />
 
-      <Paper>
+      </Box>
 
-        <Table>
+      <Paper sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <Table stickyHeader>
 
           <TableHead>
 
@@ -338,6 +343,7 @@ export default function Driver() {
           </TableBody>
 
         </Table>
+        </Box>
 
       </Paper>
 

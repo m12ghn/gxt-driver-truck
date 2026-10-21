@@ -381,7 +381,9 @@ export default function Assignment() {
 
   return (
 
-    <Box sx={{ minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
+
+      <Box sx={{ flexShrink: 0 }}>
 
       <Box
         display="flex"
@@ -645,16 +647,12 @@ export default function Assignment() {
 
       </Stack>
 
-      <Paper sx={{ overflow: "hidden", maxWidth: "100%" }}>
+      </Box>
 
-        <TableContainer
-          sx={{
-            overflowX: "auto",
-            maxWidth: "100%",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-        <Table size="small" sx={{ minWidth: 1500 }}>
+      <Paper sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+        <TableContainer sx={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        <Table stickyHeader size="small" sx={{ minWidth: 1500 }}>
 
           <TableHead>
 

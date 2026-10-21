@@ -98,27 +98,35 @@ export default function User() {
   }, [users, keyword]);
 
   return (
-    <Box>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
 
       <Paper
         elevation={3}
         sx={{
           p: 3,
           borderRadius: 3,
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
 
-        <UserToolbar
-          keyword={keyword}
-          setKeyword={setKeyword}
-          onAdd={handleAdd}
-        />
+        <Box sx={{ flexShrink: 0 }}>
+          <UserToolbar
+            keyword={keyword}
+            setKeyword={setKeyword}
+            onAdd={handleAdd}
+          />
+        </Box>
 
-        <UserTable
-          users={filteredUsers}
-          onEdit={handleEdit}
-          onChangeStatus={handleChangeStatus}
-        />
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <UserTable
+            users={filteredUsers}
+            onEdit={handleEdit}
+            onChangeStatus={handleChangeStatus}
+          />
+        </Box>
 
       </Paper>
 

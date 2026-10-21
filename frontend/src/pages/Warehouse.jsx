@@ -41,13 +41,18 @@ export default function Warehouse() {
   }
 
   return (
-    <Box>
+    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+
+      <Box sx={{ flexShrink: 0 }}>
       <Typography variant="h5" fontWeight={700} mb={2}>
         Quản lý kho
       </Typography>
 
-      <Paper>
-        <Table>
+      </Box>
+
+      <Paper sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        <Table stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell>Tên kho</TableCell>
@@ -73,6 +78,7 @@ export default function Warehouse() {
             ))}
           </TableBody>
         </Table>
+        </Box>
       </Paper>
 
       <WarehouseDialog
