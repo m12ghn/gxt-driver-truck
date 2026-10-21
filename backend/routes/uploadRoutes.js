@@ -4,6 +4,11 @@ const multer = require("multer");
 console.log("✅ uploadRoutes loaded");
 
 const uploadController = require("../controllers/uploadController");
+const {
+  requireAuth,
+  requireDriverPortalAuth,
+  requireRole,
+} = require("../middlewares/auth");
 
 const router = express.Router();
 
@@ -18,7 +23,7 @@ router.get("/test", (req, res) => {
   });
 });
 
-router.post("/excel", (req, res, next) => {
+router.post("/excel", requireAuth, requireRole("SUPER_ADMIN", "ADMIN", "WAREHOUSE"), (req, res, next) => {
   console.log("🔥 POST /api/upload/excel HIT");
   next();
 });
@@ -29,10 +34,11 @@ router.post(
   uploadController.importExcel
 );
 
-router.post("/signed", uploadController.createSignedUpload);
+router.post("/signed", requireDriverPortalAuth, uploadController.createSignedUpload);
 
 router.post(
   "/driver-photo",
+  requireDriverPortalAuth,
   multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 2 * 1024 * 1024 },

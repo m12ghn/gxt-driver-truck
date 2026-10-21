@@ -49,4 +49,11 @@ const User = sequelize.define("User", {
   },
 });
 
+// Không bao giờ trả cột mật khẩu ra ngoài API (kể cả khi controller quên loại bỏ).
+User.prototype.toJSON = function toJSON() {
+  const values = { ...this.get() };
+  delete values.matKhau;
+  return values;
+};
+
 module.exports = User;

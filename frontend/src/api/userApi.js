@@ -1,6 +1,7 @@
-import axios from "axios";
+// Dùng instance chung để tự gắn token / header đăng nhập.
+import axios from "./axios";
 
-const API = "/api/users";
+const API = "/users";
 
 // ==========================
 // Danh sách User

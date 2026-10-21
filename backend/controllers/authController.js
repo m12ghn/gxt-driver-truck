@@ -2,6 +2,8 @@ const sequelize = require("../database/database");
 const User = require("../models/User");
 const Driver = require("../models/Driver");
 const { parseKhoList } = require("../utils/scopeHelpers");
+const { signToken } = require("../middlewares/auth");
+const { hashPassword, verifyPassword } = require("../utils/password");
 
 function phoneVariants(value) {
   const digits = String(value || "").replace(/\D/g, "");
@@ -55,13 +57,17 @@ exports.adminLogin = async (req, res) => {
       matKhau === process.env.SUPER_ADMIN_PASS
     ) {
 
+      const superAdmin = {
+        id: 0,
+        hoTen: "Super Admin",
+        quyen: "SUPER_ADMIN",
+      };
+      const superToken = signToken(superAdmin);
+      if (superToken) superAdmin.token = superToken;
+
       return res.json({
         success: true,
-        data: {
-          id: 0,
-          hoTen: "Super Admin",
-          quyen: "SUPER_ADMIN",
-        },
+        data: superAdmin,
       });
 
     }
@@ -69,12 +75,22 @@ exports.adminLogin = async (req, res) => {
     // ==========================
     // ADMIN / WAREHOUSE
     // ==========================
-    const user = await User.findOne({
-      where: {
-        msnv: taiKhoan,
-        matKhau,
-      },
+    const candidate = await User.findOne({
+      where: { msnv: String(taiKhoan ?? "") },
     });
+
+    const check = candidate
+      ? verifyPassword(matKhau, candidate.matKhau)
+      : { ok: false, needsUpgrade: false };
+
+    const user = check.ok ? candidate : null;
+
+    if (user && check.needsUpgrade) {
+      // Mật khẩu đúng nhưng đang lưu chữ thường -> băm lại lần đầu đăng nhập
+      user
+        .update({ matKhau: hashPassword(matKhau) })
+        .catch((err) => console.error("Hash password failed:", err.message));
+    }
 
     if (!user) {
 
@@ -88,6 +104,9 @@ exports.adminLogin = async (req, res) => {
     const plain = user.toJSON();
     delete plain.matKhau;
     plain.khoList = parseKhoList(plain.kho);
+
+    const token = signToken(plain);
+    if (token) plain.token = token;
 
     return res.json({
       success: true,
@@ -221,6 +240,9 @@ exports.driverLogin = async (req, res) => {
     const plain = typeof user.toJSON === "function" ? user.toJSON() : { ...user };
     delete plain.matKhau;
     plain.khoList = parseKhoList(plain.kho);
+
+    const driverToken = signToken(plain);
+    if (driverToken) plain.token = driverToken;
 
     return res.json({
       success: true,

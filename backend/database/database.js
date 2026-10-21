@@ -27,10 +27,14 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   protocol: "postgres",
   logging: false,
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    },
+    // DATABASE_SSL=false chỉ dùng khi chạy test với Postgres cục bộ
+    ssl:
+      process.env.DATABASE_SSL === "false"
+        ? false
+        : {
+            require: true,
+            rejectUnauthorized: false,
+          },
     connectionTimeoutMillis: isServerless ? 25000 : 30000,
   },
   pool: {
