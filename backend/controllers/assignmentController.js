@@ -1064,11 +1064,21 @@ exports.updateAssignmentOdo = async (req, res) => {
     const nextCheckOut =
       patch.odoCheckOut ?? parseOdo(assignment.odoCheckOut);
 
-    if (
+    const odoConflict =
       nextCheckIn != null &&
       nextCheckOut != null &&
-      nextCheckOut <= nextCheckIn
-    ) {
+      nextCheckOut <= nextCheckIn;
+
+    // Super Admin sửa từng chiều (ví dụ chỉ Check In) thì vẫn cho lưu số đúng,
+    // dù Check Out hiện tại chưa khớp. Chỉ chặn khi gửi cả hai số cùng lúc.
+    if (odoConflict && hasCheckIn && hasCheckOut) {
+      return res.status(400).json({
+        success: false,
+        message: `ODO Check Out phải lớn hơn ODO Check In (${nextCheckIn}).`,
+      });
+    }
+
+    if (odoConflict && hasCheckOut && !hasCheckIn) {
       return res.status(400).json({
         success: false,
         message: `ODO Check Out phải lớn hơn ODO Check In (${nextCheckIn}).`,
@@ -1080,9 +1090,14 @@ exports.updateAssignmentOdo = async (req, res) => {
       console.error("syncVehicleKmFromOdo:", err.message)
     );
 
+    const warning = odoConflict
+      ? `Đã lưu ODO Check In ${nextCheckIn}. Chuyến này đang có ODO Check Out ${nextCheckOut} — cần sửa Check Out lớn hơn Check In.`
+      : null;
+
     res.json({
       success: true,
-      message: "Cập nhật ODO thành công.",
+      message: warning || "Cập nhật ODO thành công.",
+      warning,
       data: assignment,
     });
   } catch (err) {

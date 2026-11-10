@@ -62,7 +62,7 @@ export default function CheckInDetailDialog({
       });
       const updated = res.data?.data || { ...assignment, odoCheckIn: Number(next) };
       onUpdated?.(updated);
-      alert("Đã cập nhật ODO Check In.");
+      alert(res.data?.message || "Đã cập nhật ODO Check In.");
     } catch (err) {
       alert(err.response?.data?.message || "Không lưu được số ODO.");
     } finally {
