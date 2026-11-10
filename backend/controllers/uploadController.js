@@ -17,7 +17,9 @@ const {
   createSignedUpload,
   createSignedUploads,
 } = require("../utils/uploadToSupabase");
-const { normalizeKhoName } = require("../utils/ensureWarehouses");
+const Warehouse = require("../models/Warehouse");
+const { normalizeKhoName, SHORT_TO_OFFICIAL } = require("../utils/ensureWarehouses");
+const { ensureWarehouseColumns } = require("../utils/ensureWarehouseColumns");
 const { assertWarehouseAccess } = require("../utils/scopeHelpers");
 const { parseDuAn, isVungHcm } = require("../constants/projects");
 
@@ -41,6 +43,103 @@ function cell(row, ...names) {
   }
 
   return "";
+}
+
+function normalizeLocationKey(value) {
+  return String(value ?? "")
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .replace(/\.0+$/, "");
+}
+
+function locationKind(loc) {
+  return loc?.loai === "BUU_CUC" ? "BUU_CUC" : "KHO";
+}
+
+function addNameAlias(byName, key, loc) {
+  const k = normalizeLocationKey(key).toLowerCase();
+  if (!k) return;
+  const existed = byName.get(k);
+  if (!existed) {
+    byName.set(k, loc);
+    return;
+  }
+  if (existed.ambiguous) return;
+  if (existed !== loc && existed.id && loc.id && existed.id !== loc.id) {
+    byName.set(k, { ambiguous: true });
+  }
+}
+
+function indexLocations(locations) {
+  const byId = new Map();
+  const byName = new Map();
+
+  for (const loc of locations) {
+    const id = normalizeLocationKey(loc.idKho).toLowerCase();
+    if (id) byId.set(id, loc);
+    addNameAlias(byName, loc.ten, loc);
+    addNameAlias(byName, String(loc.ten || "").replace(/^\(HCM\)\s*/i, ""), loc);
+  }
+
+  for (const [short, official] of Object.entries(SHORT_TO_OFFICIAL)) {
+    const loc =
+      locations.find((item) => String(item.ten || "").trim() === official) || {
+        ten: official,
+        loai: "KHO",
+      };
+    addNameAlias(byName, short, loc);
+    addNameAlias(byName, official, loc);
+  }
+
+  return { byId, byName };
+}
+
+function uniqueFuzzyLocation(text, expected, locations) {
+  const needle = text.toLowerCase();
+  if (needle.length < 4) return null;
+
+  const hits = locations.filter((loc) => {
+    if (locationKind(loc) !== expected) return false;
+    const ten = String(loc.ten || "").toLowerCase();
+    const stripped = ten.replace(/^\(hcm\)\s*/, "");
+    return ten === needle || stripped === needle || stripped.includes(needle);
+  });
+
+  return hits.length === 1 ? hits[0] : null;
+}
+
+function resolveImportLocation(raw, { hcm, byId, byName, locations }) {
+  const text = normalizeLocationKey(raw);
+  if (!text) return { error: "missing" };
+
+  const expected = hcm ? "BUU_CUC" : "KHO";
+  const key = text.toLowerCase();
+
+  const pick = (hit) => {
+    if (!hit || hit.ambiguous) return null;
+    if (locationKind(hit) !== expected) return { error: "wrongtype", text };
+    return { ten: hit.ten };
+  };
+
+  const byIdHit = pick(byId.get(key));
+  if (byIdHit) return byIdHit;
+
+  const byNameHit = pick(byName.get(key));
+  if (byNameHit) return byNameHit;
+
+  if (!hcm) {
+    const official = normalizeKhoName(text);
+    const officialHit = pick(byName.get(String(official || "").trim().toLowerCase()));
+    if (officialHit) return officialHit;
+    if (official && official.toLowerCase() !== key) {
+      return { ten: official };
+    }
+  }
+
+  const fuzzy = uniqueFuzzyLocation(text, expected, locations);
+  if (fuzzy) return { ten: fuzzy.ten };
+
+  return { error: "notfound", text };
 }
 
 // ========================================
@@ -68,6 +167,13 @@ exports.importExcel = async (req, res) => {
     });
     const duAn = parseDuAn(req.body?.duAn);
     const hcm = isVungHcm(duAn);
+    const locationLabel = hcm ? "bưu cục" : "kho";
+
+    await ensureWarehouseColumns();
+    const locations = await Warehouse.findAll({
+      attributes: ["id", "idKho", "ten", "loai"],
+    });
+    const { byId, byName } = indexLocations(locations);
 
     const vehicles = await Vehicle.findAll({
       attributes: ["id", "bienSo"],
@@ -133,13 +239,43 @@ exports.importExcel = async (req, res) => {
       const bienSo = String(cell(row, "Biển số", "Bien so") || "").trim();
       const msnv = normalizeMsnv(cell(row, "MSNV", "Msnv"));
       const ca = String(cell(row, "Ca") || "").trim();
-      const khoRaw = cell(row, "Bưu cục", "Buu cuc", "Kho");
-      const kho = hcm ? String(khoRaw || "").trim() : normalizeKhoName(khoRaw);
+      const khoRaw = cell(
+        row,
+        "ID bưu cục",
+        "ID BC",
+        "ID kho",
+        "idKho",
+        "Bưu cục",
+        "Buu cuc",
+        "Kho"
+      );
+      const resolved = resolveImportLocation(khoRaw, {
+        hcm,
+        byId,
+        byName,
+        locations,
+      });
 
-      if (!kho) {
-        errors.push(`Dòng ${i + 2}: Thiếu ${hcm ? "bưu cục" : "kho"}.`);
+      if (resolved.error === "missing") {
+        errors.push(`Dòng ${i + 2}: Thiếu ${locationLabel}.`);
         continue;
       }
+
+      if (resolved.error === "wrongtype") {
+        errors.push(
+          `Dòng ${i + 2}: "${resolved.text}" không phải ${locationLabel}. Không import được dòng này.`
+        );
+        continue;
+      }
+
+      if (resolved.error === "notfound") {
+        errors.push(
+          `Dòng ${i + 2}: Không tìm thấy ${locationLabel} "${resolved.text}". Không import được dòng này.`
+        );
+        continue;
+      }
+
+      const kho = resolved.ten;
 
       if (!hcm) {
         try {
