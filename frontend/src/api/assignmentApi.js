@@ -81,6 +81,13 @@ export const confirmWarehouse = (id, data) => {
 };
 
 // ==============================
+// Super Admin - Sửa ODO
+// ==============================
+export const updateAssignmentOdo = (id, data) => {
+  return api.put(`/assignments/${id}/odo`, data);
+};
+
+// ==============================
 // Cập nhật phân công
 // ==============================
 export const updateAssignment = (id, data) => {

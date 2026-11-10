@@ -14,6 +14,7 @@ import {
   Stack,
   Divider,
   alpha,
+  TextField,
 } from "@mui/material";
 
 import LoginIcon from "@mui/icons-material/Login";
@@ -28,6 +29,7 @@ import {
 } from "../utils/shiftHelpers";
 import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
 import { getWarehouses } from "../api/warehouseApi";
+import { updateAssignmentOdo } from "../api/assignmentApi";
 import WarehouseGpsMap from "./WarehouseGpsMap";
 
 function formatDateTime(date) {
@@ -128,12 +130,70 @@ function PhotoGrid({ photos }) {
   );
 }
 
+function OdoEditor({ value, onSave }) {
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft(value ?? "");
+  }, [value]);
+
+  const changed = String(draft) !== String(value ?? "");
+
+  async function handleSave() {
+    const next = String(draft).trim();
+    if (!next || Number(next) < 0 || !Number.isFinite(Number(next))) {
+      alert("Vui lòng nhập số ODO hợp lệ.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave(Number(next));
+    } catch (err) {
+      alert(err.response?.data?.message || "Không lưu được số ODO.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Box sx={{ mb: 1.5 }}>
+      <Stack direction="row" spacing={0.75} alignItems="center" mb={0.5}>
+        <SpeedIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+          ODO
+        </Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField
+          size="small"
+          type="number"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          inputProps={{ min: 0, step: 1 }}
+          sx={{ maxWidth: 180 }}
+        />
+        <Button
+          size="small"
+          variant="contained"
+          disabled={!changed || saving}
+          onClick={handleSave}
+        >
+          {saving ? "Đang lưu..." : "Lưu"}
+        </Button>
+      </Stack>
+    </Box>
+  );
+}
+
 function CheckSection({
   title,
   icon,
   accentColor,
   time,
   odo,
+  odoEditor,
   latitude,
   longitude,
   timeStatus,
@@ -197,11 +257,13 @@ function CheckSection({
             }
           />
 
-          <InfoRow
-            icon={<SpeedIcon sx={{ fontSize: 16, color: "text.secondary" }} />}
-            label="ODO"
-            value={odo ?? "-"}
-          />
+          {odoEditor || (
+            <InfoRow
+              icon={<SpeedIcon sx={{ fontSize: 16, color: "text.secondary" }} />}
+              label="ODO"
+              value={odo ?? "-"}
+            />
+          )}
 
           <InfoRow
             icon={<PlaceIcon sx={{ fontSize: 16, color: "text.secondary" }} />}
@@ -242,7 +304,14 @@ function CheckSection({
   );
 }
 
-export default function AssignmentDetailDialog({ open, onClose, assignment }) {
+export default function AssignmentDetailDialog({
+  open,
+  onClose,
+  assignment,
+  onUpdated,
+}) {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const canEditOdo = user?.quyen === "SUPER_ADMIN";
   const [warehouse, setWarehouse] = useState(null);
 
   useEffect(() => {
@@ -267,6 +336,12 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
       cancelled = true;
     };
   }, [open, assignment?.kho]);
+
+  async function saveOdo(payload) {
+    const res = await updateAssignmentOdo(assignment.id, payload);
+    const next = res.data?.data || assignment;
+    onUpdated?.(next);
+  }
 
   if (!assignment) return null;
 
@@ -537,6 +612,14 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
               accentColor="#0F9B94"
               time={assignment.checkInTime}
               odo={assignment.odoCheckIn}
+              odoEditor={
+                canEditOdo ? (
+                  <OdoEditor
+                    value={assignment.odoCheckIn}
+                    onSave={(odo) => saveOdo({ odoCheckIn: odo })}
+                  />
+                ) : null
+              }
               latitude={assignment.checkInLatitude}
               longitude={assignment.checkInLongitude}
               timeStatus={checkInStatus}
@@ -555,6 +638,14 @@ export default function AssignmentDetailDialog({ open, onClose, assignment }) {
               accentColor="#ef6c00"
               time={assignment.checkOutTime}
               odo={assignment.odoCheckOut}
+              odoEditor={
+                canEditOdo ? (
+                  <OdoEditor
+                    value={assignment.odoCheckOut}
+                    onSave={(odo) => saveOdo({ odoCheckOut: odo })}
+                  />
+                ) : null
+              }
               latitude={assignment.checkOutLatitude}
               longitude={assignment.checkOutLongitude}
               timeStatus={checkOutStatus}

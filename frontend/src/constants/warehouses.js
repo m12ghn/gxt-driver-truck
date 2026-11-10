@@ -21,6 +21,17 @@ const SHORT_BY_OFFICIAL = {
   "Kho Trung Chuyển Hồ Chí Minh 20": "HCM 20",
 };
 
+const OFFICIAL_BY_SHORT = Object.fromEntries(
+  Object.entries(SHORT_BY_OFFICIAL).map(([official, short]) => [short, official])
+);
+
+export function officialKhoName(name) {
+  const n = String(name || "").trim();
+  if (!n) return "";
+  if (SHORT_BY_OFFICIAL[n]) return n;
+  return OFFICIAL_BY_SHORT[n] || n;
+}
+
 export function officialWarehouseNames(list) {
   const names = (list || [])
     .map((w) => (typeof w === "string" ? w : w?.ten || w?.name))

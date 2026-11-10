@@ -39,7 +39,7 @@ import { getWarehouses } from "../api/warehouseApi";
 import {
   formatKhoLabel,
   parseKhoList,
-  shortKhoName,
+  officialKhoName,
   khoMatches,
   officialWarehouseNames,
 } from "../constants/warehouses";
@@ -344,10 +344,10 @@ export default function Assignment() {
   const khoOptions = [
     ...new Set(
       assignments
-        .map((item) => item.kho)
+        .map((item) => officialKhoName(item.kho))
         .filter(Boolean)
     ),
-  ].sort();
+  ].sort((a, b) => a.localeCompare(b, "vi"));
 
   const filteredAssignments = assignments.filter((item) => {
 
@@ -526,7 +526,7 @@ export default function Assignment() {
 
               {(isWarehouse ? managedKhoList : khoOptions).map((kho) => (
                 <MenuItem key={kho} value={kho}>
-                  {shortKhoName(kho)}
+                  {officialKhoName(kho)}
                 </MenuItem>
               ))}
             </TextField>
@@ -694,7 +694,7 @@ export default function Assignment() {
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
-      {item.kho}
+      {officialKhoName(item.kho)}
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -1048,6 +1048,12 @@ export default function Assignment() {
         open={openAssignmentDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenAssignmentDetail(false)}
+        onUpdated={(next) => {
+          setSelectedAssignment((prev) =>
+            prev ? { ...prev, ...next } : next
+          );
+          loadAssignments();
+        }}
       />
 
       <Dialog

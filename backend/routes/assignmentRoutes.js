@@ -125,6 +125,15 @@ router.get("/", adminSide, assignmentController.getAssignments);
 router.post("/", adminSide, assignmentController.createAssignment);
 
 // ==============================
+// Super Admin - Sửa ODO Check In / Check Out
+// ==============================
+router.put(
+  "/:id/odo",
+  requireRole("SUPER_ADMIN"),
+  assignmentController.updateAssignmentOdo
+);
+
+// ==============================
 // Cập nhật phân công
 // ==============================
 router.put("/:id", adminSide, assignmentController.updateAssignment);

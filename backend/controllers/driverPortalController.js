@@ -14,7 +14,10 @@ const {
 
 const { PHOTO_FIELDS } = require("../middlewares/uploadDriverPhotos");
 const { uploadBufferToSupabase } = require("../utils/uploadToSupabase");
-const { findWarehouseByName } = require("../utils/ensureWarehouses");
+const {
+  ensureWarehouses,
+  resolveWarehouseForAssignment,
+} = require("../utils/ensureWarehouses");
 const { withReadablePhotosList } = require("../utils/uploadToSupabase");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
@@ -175,7 +178,8 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
-    const warehouse = await findWarehouseByName(assignment.kho);
+    await ensureWarehouses();
+    const warehouse = await resolveWarehouseForAssignment(assignment);
 
     if (!warehouse) {
       return res.status(400).json({
@@ -315,7 +319,8 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
-    const warehouse = await findWarehouseByName(assignment.kho);
+    await ensureWarehouses();
+    const warehouse = await resolveWarehouseForAssignment(assignment);
 
     if (!warehouse) {
       return res.status(400).json({

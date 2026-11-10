@@ -25,6 +25,7 @@ const {
 } = require("../utils/scopeHelpers");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
+  parseOdo,
   validateCheckInOdo,
   validateCheckOutOdo,
 } = require("../utils/odoHelpers");
@@ -868,6 +869,16 @@ exports.updateAssignment = async (req, res) => {
 
     if (denyIfOutOfScope(req, res, assignment)) return;
 
+    if (
+      Object.prototype.hasOwnProperty.call(req.body, "odoCheckIn") ||
+      Object.prototype.hasOwnProperty.call(req.body, "odoCheckOut")
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ Super Admin được sửa số ODO trong chi tiết phân công.",
+      });
+    }
+
     let ngay = parseNgay(req.body.ngay) || assignment.ngay;
     let kho = req.body.kho || assignment.kho;
     const ca = req.body.ca || assignment.ca;
@@ -952,6 +963,112 @@ exports.updateAssignment = async (req, res) => {
       message: err.message,
     });
 
+  }
+};
+
+// ==============================
+// Super Admin - Sửa ODO Check In / Check Out
+// ==============================
+exports.updateAssignmentOdo = async (req, res) => {
+  try {
+    if (req.user?.quyen !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Chỉ Super Admin được sửa số ODO.",
+      });
+    }
+
+    const assignment = await Assignment.findByPk(req.params.id);
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy phân công",
+      });
+    }
+
+    const patch = {};
+    const hasCheckIn = Object.prototype.hasOwnProperty.call(
+      req.body,
+      "odoCheckIn"
+    );
+    const hasCheckOut = Object.prototype.hasOwnProperty.call(
+      req.body,
+      "odoCheckOut"
+    );
+
+    if (!hasCheckIn && !hasCheckOut) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu số ODO cần sửa.",
+      });
+    }
+
+    if (hasCheckIn) {
+      if (!assignment.checkInTime) {
+        return res.status(400).json({
+          success: false,
+          message: "Chuyến này chưa Check In, không thể sửa ODO Check In.",
+        });
+      }
+      const value = parseOdo(req.body.odoCheckIn);
+      if (value == null) {
+        return res.status(400).json({
+          success: false,
+          message: "Số ODO Check In không hợp lệ.",
+        });
+      }
+      patch.odoCheckIn = value;
+    }
+
+    if (hasCheckOut) {
+      if (!assignment.checkOutTime) {
+        return res.status(400).json({
+          success: false,
+          message: "Chuyến này chưa Check Out, không thể sửa ODO Check Out.",
+        });
+      }
+      const value = parseOdo(req.body.odoCheckOut);
+      if (value == null) {
+        return res.status(400).json({
+          success: false,
+          message: "Số ODO Check Out không hợp lệ.",
+        });
+      }
+      patch.odoCheckOut = value;
+    }
+
+    const nextCheckIn =
+      patch.odoCheckIn ?? parseOdo(assignment.odoCheckIn);
+    const nextCheckOut =
+      patch.odoCheckOut ?? parseOdo(assignment.odoCheckOut);
+
+    if (
+      nextCheckIn != null &&
+      nextCheckOut != null &&
+      nextCheckOut <= nextCheckIn
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `ODO Check Out phải lớn hơn ODO Check In (${nextCheckIn}).`,
+      });
+    }
+
+    await assignment.update(patch);
+    await syncVehicleKmFromOdo(assignment.vehicleId).catch((err) =>
+      console.error("syncVehicleKmFromOdo:", err.message)
+    );
+
+    res.json({
+      success: true,
+      message: "Cập nhật ODO thành công.",
+      data: assignment,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
