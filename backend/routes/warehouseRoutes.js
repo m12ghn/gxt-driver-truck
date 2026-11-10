@@ -8,6 +8,7 @@ const { requireAuth, requireRole } = require("../middlewares/auth");
 router.use(requireAuth, requireRole("SUPER_ADMIN", "ADMIN", "WAREHOUSE"), attachUser);
 
 router.get("/", warehouseController.getWarehouses);
+router.post("/", requireRole("SUPER_ADMIN", "ADMIN"), warehouseController.createWarehouse);
 router.put("/:id", requireRole("SUPER_ADMIN", "ADMIN"), warehouseController.updateWarehouse);
 
 module.exports = router;

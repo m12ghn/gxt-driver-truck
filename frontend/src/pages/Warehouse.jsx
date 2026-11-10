@@ -13,12 +13,14 @@ import {
   TableCell,
   CircularProgress,
   Button,
+  Stack,
 } from "@mui/material";
 
 export default function Warehouse() {
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     loadWarehouses();
@@ -44,10 +46,27 @@ export default function Warehouse() {
     <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
 
       <Box sx={{ flexShrink: 0 }}>
-      <Typography variant="h5" fontWeight={700} mb={2}>
-        Quản lý kho
-      </Typography>
-
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+        flexWrap="wrap"
+        gap={1.5}
+      >
+        <Typography variant="h5" fontWeight={700}>
+          Quản lý kho
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => {
+            setSelected(null);
+            setOpenDialog(true);
+          }}
+        >
+          + THÊM KHO
+        </Button>
+      </Stack>
       </Box>
 
       <Paper sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -70,7 +89,13 @@ export default function Warehouse() {
                 <TableCell>{item.longitude}</TableCell>
                 <TableCell>{item.banKinh}</TableCell>
                 <TableCell align="right">
-                  <Button size="small" onClick={() => setSelected(item)}>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setSelected(item);
+                      setOpenDialog(true);
+                    }}
+                  >
                     Sửa GPS
                   </Button>
                 </TableCell>
@@ -82,9 +107,10 @@ export default function Warehouse() {
       </Paper>
 
       <WarehouseDialog
-        open={Boolean(selected)}
+        open={openDialog}
         warehouse={selected}
         onClose={(reload) => {
+          setOpenDialog(false);
           setSelected(null);
           if (reload) loadWarehouses();
         }}

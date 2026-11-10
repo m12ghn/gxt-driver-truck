@@ -37,8 +37,7 @@ export function officialWarehouseNames(list) {
     .map((w) => (typeof w === "string" ? w : w?.ten || w?.name))
     .filter(Boolean);
 
-  const official = names.filter((name) => /^Kho /i.test(name));
-  const unique = [...new Set(official.length ? official : names)];
+  const unique = [...new Set(names)];
 
   return unique.sort((a, b) => a.localeCompare(b, "vi"));
 }
