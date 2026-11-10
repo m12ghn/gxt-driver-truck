@@ -170,22 +170,35 @@ exports.updateWarehouse = async (req, res) => {
       }
     }
 
+    const gpsChanged =
+      Math.abs(Number(warehouse.latitude) - parsed.latitude) > 1e-7 ||
+      Math.abs(Number(warehouse.longitude) - parsed.longitude) > 1e-7 ||
+      Number(warehouse.banKinh) !== parsed.banKinh;
+
     const coords = {
-      idKho: parsed.idKho,
       latitude: parsed.latitude,
       longitude: parsed.longitude,
       banKinh: parsed.banKinh,
     };
-    await warehouse.update(coords);
-    await syncSiblingWarehouseCoords(warehouse, coords);
-    const updatedGps = await recalculateAssignmentGpsForWarehouse(warehouse);
+
+    await warehouse.update({
+      idKho: parsed.idKho,
+      ...coords,
+    });
+
+    let updatedGps = 0;
+    if (gpsChanged) {
+      await syncSiblingWarehouseCoords(warehouse, coords);
+      updatedGps = await recalculateAssignmentGpsForWarehouse(warehouse);
+    }
 
     res.json({
       success: true,
-      message:
-        updatedGps > 0
+      message: gpsChanged
+        ? updatedGps > 0
           ? `Đã cập nhật kho và tính lại GPS ${updatedGps} chuyến theo bán kính ${parsed.banKinh}m.`
-          : "Đã cập nhật tọa độ kho.",
+          : "Đã cập nhật tọa độ kho."
+        : "Đã cập nhật ID kho.",
       updatedGps,
       data: warehouse,
     });

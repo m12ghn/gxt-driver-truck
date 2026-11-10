@@ -9,6 +9,6 @@ export const createWarehouse = (data) => {
 };
 
 export const updateWarehouse = (id, data) => {
-  return api.put(`/warehouses/${id}`, data);
+  return api.put(`/warehouses/${id}`, data, { timeout: 60000 });
 };
 

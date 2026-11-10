@@ -68,10 +68,7 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
     try {
       if (isEdit) {
         const res = await updateWarehouse(warehouse.id, payload);
-        alert(
-          res.data?.message ||
-            "Đã cập nhật kho và tính lại GPS Check In/Out theo bán kính mới."
-        );
+        alert(res.data?.message || "Đã cập nhật kho.");
       } else {
         const res = await createWarehouse({
           ...payload,
