@@ -17,6 +17,18 @@ async function ensureAssignmentColumns() {
     console.log("✅ Added column Assignments.maChuyenDi");
   }
 
+  if (!table.duAn) {
+    await qi.addColumn("Assignments", "duAn", {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "GXT",
+    });
+    await sequelize.query(
+      `UPDATE "Assignments" SET "duAn" = 'GXT' WHERE "duAn" IS NULL OR "duAn" = ''`
+    );
+    console.log("✅ Added column Assignments.duAn");
+  }
+
   try {
     await qi.addIndex("Assignments", ["ngay", "vehicleId"], {
       unique: true,

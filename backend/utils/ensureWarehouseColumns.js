@@ -27,6 +27,27 @@ async function ensureWarehouseColumns() {
     console.warn("warehouses_idkho_unique:", err.message);
   }
 
+  if (!table.loai) {
+    await qi.addColumn("Warehouses", "loai", {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "KHO",
+    });
+    console.log("✅ Added column Warehouses.loai");
+  }
+
+  await sequelize.query(`
+    UPDATE "Warehouses"
+    SET "loai" = 'BUU_CUC'
+    WHERE ("loai" IS NULL OR "loai" = '' OR "loai" = 'KHO')
+      AND ("ten" ILIKE '%(HCM)%' OR "ten" ~* '(^|[[:space:]])CK([[:space:]]|$)')
+  `);
+  await sequelize.query(`
+    UPDATE "Warehouses"
+    SET "loai" = 'KHO'
+    WHERE "loai" IS NULL OR "loai" = ''
+  `);
+
   ensured = true;
 }
 

@@ -31,6 +31,7 @@ const {
 } = require("../utils/odoHelpers");
 const { getShiftPayroll } = require("../utils/shiftHelpers");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
+const { parseDuAn, isVungHcm, duAnWhere } = require("../constants/projects");
 const {
   withReadablePhotos,
 } = require("../utils/uploadToSupabase");
@@ -214,6 +215,7 @@ exports.getAssignments = async (req, res) => {
       ngay: {
         [Op.between]: [from, to],
       },
+      duAn: duAnWhere(req.query.duAn),
     });
 
     const assignments = await Assignment.findAll({
@@ -264,6 +266,7 @@ exports.exportExcel = async (req, res) => {
       ngay: {
         [Op.between]: [from, to],
       },
+      duAn: duAnWhere(req.query.duAn),
     });
 
     const assignments = await Assignment.findAll({
@@ -287,7 +290,7 @@ exports.exportExcel = async (req, res) => {
       "Ca làm việc": payroll.caLamViec,
       "Loại": payroll.loai,
       "Lương": payroll.luong,
-      "Kho": item.kho,
+      [isVungHcm(req.query.duAn) ? "Bưu cục" : "Kho"]: item.kho,
       "Biển số": item.Vehicle?.bienSo || "",
       "Loại xe": item.Vehicle?.loaiXe || "",
       "MSNV": item.Driver?.msnv || "",
@@ -380,19 +383,25 @@ exports.createAssignment = async (req, res) => {
       kho,
       vehicleId,
       driverId,
+      duAn: duAnRaw,
     } = req.body;
 
     ngay = parseNgay(ngay);
+    const duAn = parseDuAn(duAnRaw);
 
     if (!ngay || !ca || !kho || !vehicleId || !driverId) {
       return res.status(400).json({
         success: false,
-        message: "Thiếu ngày, ca, kho, xe hoặc tài xế.",
+        message: isVungHcm(duAn)
+          ? "Thiếu ngày, ca, bưu cục, xe hoặc tài xế."
+          : "Thiếu ngày, ca, kho, xe hoặc tài xế.",
       });
     }
 
     try {
-      if (req.user?.quyen === "WAREHOUSE") {
+      if (isVungHcm(duAn)) {
+        kho = String(kho || "").trim();
+      } else if (req.user?.quyen === "WAREHOUSE") {
         kho = assertWarehouseKhoChoice(req, kho);
       } else {
         kho = normalizeKhoName(kho);
@@ -450,6 +459,7 @@ exports.createAssignment = async (req, res) => {
       ngay,
       ca,
       kho,
+      duAn,
       vehicleId,
       driverId,
       trangThai: "Chưa thực hiện",
@@ -884,9 +894,12 @@ exports.updateAssignment = async (req, res) => {
     const ca = req.body.ca || assignment.ca;
     const vehicleId = req.body.vehicleId || assignment.vehicleId;
     const driverId = req.body.driverId || assignment.driverId;
+    const duAn = parseDuAn(req.body.duAn || assignment.duAn);
 
     try {
-      if (req.user?.quyen === "WAREHOUSE") {
+      if (isVungHcm(duAn)) {
+        kho = String(kho || "").trim();
+      } else if (req.user?.quyen === "WAREHOUSE") {
         kho = assertWarehouseKhoChoice(req, kho);
       } else {
         kho = normalizeKhoName(kho);
@@ -946,6 +959,7 @@ exports.updateAssignment = async (req, res) => {
       ngay,
       ca,
       kho,
+      duAn,
       vehicleId,
       driverId,
     });

@@ -1,7 +1,8 @@
 import api from "./axios";
 
-export const getWarehouses = () => {
-  return api.get("/warehouses");
+export const getWarehouses = (loai) => {
+  const query = loai ? `?loai=${encodeURIComponent(loai)}` : "";
+  return api.get(`/warehouses${query}`);
 };
 
 export const createWarehouse = (data) => {

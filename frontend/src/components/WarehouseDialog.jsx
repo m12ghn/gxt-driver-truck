@@ -9,11 +9,19 @@ import {
   Button,
   TextField,
   Grid,
+  MenuItem,
 } from "@mui/material";
+
+function guessLoai(ten) {
+  const n = String(ten || "");
+  if (/\(HCM\)/i.test(n) || /(^|\s)CK(\s|$)/i.test(n)) return "BUU_CUC";
+  return "KHO";
+}
 
 const EMPTY_FORM = {
   idKho: "",
   ten: "",
+  loai: "KHO",
   latitude: "",
   longitude: "",
   banKinh: 100,
@@ -29,6 +37,9 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
       setForm({
         idKho: warehouse.idKho ?? "",
         ten: warehouse.ten ?? "",
+        loai: warehouse.loai === "BUU_CUC" || warehouse.loai === "KHO"
+          ? warehouse.loai
+          : guessLoai(warehouse.ten),
         latitude: warehouse.latitude ?? "",
         longitude: warehouse.longitude ?? "",
         banKinh: warehouse.banKinh ?? 100,
@@ -44,12 +55,12 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
 
   async function handleSave() {
     if (!String(form.idKho || "").trim()) {
-      alert("Vui lòng nhập ID kho.");
+      alert("Vui lòng nhập ID.");
       return;
     }
 
     if (!isEdit && !String(form.ten || "").trim()) {
-      alert("Vui lòng nhập tên kho.");
+      alert("Vui lòng nhập tên.");
       return;
     }
 
@@ -60,6 +71,7 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
 
     const payload = {
       idKho: String(form.idKho).trim(),
+      loai: form.loai === "BUU_CUC" ? "BUU_CUC" : "KHO",
       latitude: Number(form.latitude),
       longitude: Number(form.longitude),
       banKinh: Number(form.banKinh),
@@ -68,20 +80,20 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
     try {
       if (isEdit) {
         const res = await updateWarehouse(warehouse.id, payload);
-        alert(res.data?.message || "Đã cập nhật kho.");
+        alert(res.data?.message || "Đã cập nhật.");
       } else {
         const res = await createWarehouse({
           ...payload,
           ten: String(form.ten).trim(),
         });
-        alert(res.data?.message || "Đã thêm kho mới.");
+        alert(res.data?.message || "Đã thêm mới.");
       }
       onClose(true);
     } catch (err) {
       console.error(err);
       alert(
         err.response?.data?.message ||
-          (isEdit ? "Cập nhật thất bại." : "Thêm kho thất bại.")
+          (isEdit ? "Cập nhật thất bại." : "Thêm thất bại.")
       );
     }
   }
@@ -89,14 +101,14 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
   return (
     <Dialog open={open} onClose={() => onClose(false)} fullWidth maxWidth="sm">
       <DialogTitle>
-        {isEdit ? `Tọa độ kho ${warehouse?.ten || ""}` : "Thêm kho"}
+        {isEdit ? warehouse?.ten || "Sửa kho/bưu cục" : "Thêm kho/bưu cục"}
       </DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           <Grid size={{ xs: 12, sm: 4 }}>
             <TextField
               fullWidth
-              label="ID kho"
+              label="ID"
               name="idKho"
               value={form.idKho}
               onChange={handleChange}
@@ -105,8 +117,21 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
           </Grid>
           <Grid size={{ xs: 12, sm: 8 }}>
             <TextField
+              select
               fullWidth
-              label="Tên kho"
+              label="Loại"
+              name="loai"
+              value={form.loai}
+              onChange={handleChange}
+            >
+              <MenuItem value="KHO">Kho</MenuItem>
+              <MenuItem value="BUU_CUC">Bưu cục</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              fullWidth
+              label="Tên"
               name="ten"
               value={form.ten}
               onChange={handleChange}
@@ -147,7 +172,7 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
       <DialogActions>
         <Button onClick={() => onClose(false)}>Hủy</Button>
         <Button variant="contained" onClick={handleSave}>
-          {isEdit ? "Lưu" : "Thêm kho"}
+          {isEdit ? "Lưu" : "Thêm"}
         </Button>
       </DialogActions>
     </Dialog>

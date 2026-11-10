@@ -20,6 +20,12 @@ const Assignment = sequelize.define("Assignment", {
     allowNull: false,
   },
 
+  duAn: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: "GXT",
+  },
+
   // ==========================
   // Trạng thái
   // ==========================

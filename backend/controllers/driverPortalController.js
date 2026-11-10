@@ -18,12 +18,22 @@ const {
   ensureWarehouses,
   resolveWarehouseForAssignment,
 } = require("../utils/ensureWarehouses");
+const { isVungHcm } = require("../constants/projects");
 const { withReadablePhotosList } = require("../utils/uploadToSupabase");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
   validateCheckInOdo,
   validateCheckOutOdo,
 } = require("../utils/odoHelpers");
+
+async function resolveLocationForAssignment(assignment) {
+  await ensureWarehouses();
+  return resolveWarehouseForAssignment(assignment);
+}
+
+function locationLabel(assignment) {
+  return isVungHcm(assignment?.duAn) ? "bưu cục" : "kho";
+}
 
 function publicErrorMessage(err, fallback) {
   const msg = err?.message || "";
@@ -178,13 +188,12 @@ exports.driverCheckIn = async (req, res) => {
       });
     }
 
-    await ensureWarehouses();
-    const warehouse = await resolveWarehouseForAssignment(assignment);
+    const warehouse = await resolveLocationForAssignment(assignment);
 
     if (!warehouse) {
       return res.status(400).json({
         success: false,
-        message: `Chưa có tọa độ GPS cho kho "${assignment.kho}". Vui lòng liên hệ Admin.`,
+        message: `Chưa có tọa độ GPS cho ${locationLabel(assignment)} "${assignment.kho}". Vui lòng liên hệ Admin.`,
       });
     }
 
@@ -319,13 +328,12 @@ exports.driverCheckOut = async (req, res) => {
       });
     }
 
-    await ensureWarehouses();
-    const warehouse = await resolveWarehouseForAssignment(assignment);
+    const warehouse = await resolveLocationForAssignment(assignment);
 
     if (!warehouse) {
       return res.status(400).json({
         success: false,
-        message: `Chưa có tọa độ GPS cho kho "${assignment.kho}". Vui lòng liên hệ Admin.`,
+        message: `Chưa có tọa độ GPS cho ${locationLabel(assignment)} "${assignment.kho}". Vui lòng liên hệ Admin.`,
       });
     }
 

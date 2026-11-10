@@ -122,17 +122,23 @@ export default function MainLayout() {
       roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
-      text: "Quản lý kho",
+      text: "Quản lý kho/bưu cục",
       icon: <WarehouseIcon />,
       path: "/warehouses",
       roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
-      text: "Phân công",
+      text: "Phân công - GXT",
       icon: <AssignmentIcon />,
       path: "/assignments",
       roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
       badge: alertCounts.choXacNhan,
+    },
+    {
+      text: "Phân công - Vùng HCM",
+      icon: <AssignmentIcon />,
+      path: "/assignments-hcm",
+      roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
       text: "Check In",

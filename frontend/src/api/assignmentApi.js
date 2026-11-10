@@ -11,12 +11,13 @@ export const getTodayAssignment = (msnv) => {
 // Admin - Danh sách phân công
 // Hỗ trợ xem theo 1 ngày (ngay) hoặc khoảng ngày (from - to)
 // ==============================
-export const getAssignments = (from, to) => {
+export const getAssignments = (from, to, duAn) => {
 
   const params = new URLSearchParams();
 
   if (from) params.append("from", from);
   if (to) params.append("to", to);
+  if (duAn) params.append("duAn", duAn);
 
   const query = params.toString();
 
@@ -29,12 +30,13 @@ export const getAssignments = (from, to) => {
 // ==============================
 // Xuất Excel danh sách phân công theo khoảng ngày
 // ==============================
-export const exportAssignmentExcel = (from, to) => {
+export const exportAssignmentExcel = (from, to, duAn) => {
 
   const params = new URLSearchParams();
 
   if (from) params.append("from", from);
   if (to) params.append("to", to);
+  if (duAn) params.append("duAn", duAn);
 
   return api.get(
     `/assignments/export?${params.toString()}`,
@@ -104,11 +106,12 @@ export const deleteAssignment = (id) => {
 // ==============================
 // Import Excel
 // ==============================
-export const importAssignmentExcel = (file, onUploadProgress) => {
+export const importAssignmentExcel = (file, onUploadProgress, duAn) => {
 
   const formData = new FormData();
 
   formData.append("file", file);
+  if (duAn) formData.append("duAn", duAn);
 
   return api.post(
     "/upload/excel",

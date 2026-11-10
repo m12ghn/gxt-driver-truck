@@ -18,6 +18,11 @@ exports.getWarehouses = async (req, res) => {
       where.ten = variants.length ? { [Op.in]: variants } : "__NO_KHO__";
     }
 
+    const loai = String(req.query.loai || "").toUpperCase();
+    if (loai === "KHO" || loai === "BUU_CUC") {
+      where.loai = loai;
+    }
+
     const warehouses = await Warehouse.findAll({
       where,
       order: [["ten", "ASC"]],
@@ -38,16 +43,17 @@ exports.getWarehouses = async (req, res) => {
 function parseWarehousePayload(body, { requireName = false, requireIdKho = false } = {}) {
   const ten = String(body.ten || "").trim();
   const idKho = String(body.idKho || "").trim();
+  const loai = String(body.loai || "").toUpperCase() === "BUU_CUC" ? "BUU_CUC" : "KHO";
   const latitude = Number(body.latitude);
   const longitude = Number(body.longitude);
   const banKinh = Number(body.banKinh);
 
   if (requireIdKho && !idKho) {
-    return { error: { status: 400, message: "Vui lòng nhập ID kho." } };
+    return { error: { status: 400, message: "Vui lòng nhập ID kho/bưu cục." } };
   }
 
   if (requireName && !ten) {
-    return { error: { status: 400, message: "Vui lòng nhập tên kho." } };
+    return { error: { status: 400, message: "Vui lòng nhập tên kho/bưu cục." } };
   }
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
@@ -58,7 +64,7 @@ function parseWarehousePayload(body, { requireName = false, requireIdKho = false
     return { error: { status: 400, message: "Bán kính phải từ 20 mét trở lên." } };
   }
 
-  return { ten, idKho: idKho || null, latitude, longitude, banKinh };
+  return { ten, idKho: idKho || null, loai, latitude, longitude, banKinh };
 }
 
 exports.createWarehouse = async (req, res) => {
@@ -87,7 +93,7 @@ exports.createWarehouse = async (req, res) => {
     if (existedName) {
       return res.status(400).json({
         success: false,
-        message: "Tên kho này đã tồn tại.",
+        message: "Tên này đã tồn tại.",
       });
     }
 
@@ -95,13 +101,14 @@ exports.createWarehouse = async (req, res) => {
     if (existedId) {
       return res.status(400).json({
         success: false,
-        message: "ID kho này đã tồn tại.",
+        message: "ID này đã tồn tại.",
       });
     }
 
     const warehouse = await Warehouse.create({
       idKho: parsed.idKho,
       ten: parsed.ten,
+      loai: parsed.loai,
       latitude: parsed.latitude,
       longitude: parsed.longitude,
       banKinh: parsed.banKinh,
@@ -109,7 +116,7 @@ exports.createWarehouse = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Đã thêm kho mới.",
+      message: parsed.loai === "BUU_CUC" ? "Đã thêm bưu cục mới." : "Đã thêm kho mới.",
       data: warehouse,
     });
   } catch (err) {
@@ -118,8 +125,8 @@ exports.createWarehouse = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: fields.includes("idKho")
-          ? "ID kho này đã tồn tại."
-          : "Tên kho này đã tồn tại.",
+          ? "ID này đã tồn tại."
+          : "Tên này đã tồn tại.",
       });
     }
 
@@ -165,7 +172,7 @@ exports.updateWarehouse = async (req, res) => {
       if (existedId) {
         return res.status(400).json({
           success: false,
-          message: "ID kho này đã tồn tại.",
+          message: "ID này đã tồn tại.",
         });
       }
     }
@@ -183,6 +190,7 @@ exports.updateWarehouse = async (req, res) => {
 
     await warehouse.update({
       idKho: parsed.idKho,
+      loai: parsed.loai,
       ...coords,
     });
 
@@ -198,7 +206,7 @@ exports.updateWarehouse = async (req, res) => {
         ? updatedGps > 0
           ? `Đã cập nhật kho và tính lại GPS ${updatedGps} chuyến theo bán kính ${parsed.banKinh}m.`
           : "Đã cập nhật tọa độ kho."
-        : "Đã cập nhật ID kho.",
+        : "Đã cập nhật kho/bưu cục.",
       updatedGps,
       data: warehouse,
     });

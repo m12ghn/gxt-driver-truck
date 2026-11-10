@@ -43,8 +43,9 @@ import {
   khoMatches,
   officialWarehouseNames,
 } from "../constants/warehouses";
+import { DU_AN_GXT, isVungHcm } from "../constants/projects";
 
-export default function Assignment() {
+export default function Assignment({ duAn = DU_AN_GXT }) {
 
   const user = JSON.parse(
     localStorage.getItem("user") || "{}"
@@ -56,6 +57,10 @@ export default function Assignment() {
 
   const isWarehouse =
     user?.quyen === "WAREHOUSE";
+
+  const hcm = isVungHcm(duAn);
+  const locationLabel = hcm ? "Bưu cục" : "Kho";
+  const confirmLabel = hcm ? "Bưu cục xác nhận" : "Kho xác nhận";
 
   const userKhoList = parseKhoList(user?.khoList || user?.kho);
 
@@ -138,14 +143,14 @@ export default function Assignment() {
 
     loadAssignments();
 
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, duAn]);
 
   async function loadAssignments() {
     setLoading(true);
     setLoadError("");
 
     try {
-      const res = await getAssignments(fromDate, toDate);
+      const res = await getAssignments(fromDate, toDate, duAn);
       setAssignments(res.data?.data || []);
     } catch (err) {
       console.error(err);
@@ -164,7 +169,7 @@ export default function Assignment() {
     try {
 
       const res =
-        await exportAssignmentExcel(fromDate, toDate);
+        await exportAssignmentExcel(fromDate, toDate, duAn);
 
       const url = window.URL.createObjectURL(
         new Blob([res.data])
@@ -175,7 +180,7 @@ export default function Assignment() {
       link.href = url;
       link.setAttribute(
         "download",
-        `phan-cong-${fromDate}_${toDate}.xlsx`
+        `phan-cong-${hcm ? "vung-hcm" : "gxt"}-${fromDate}_${toDate}.xlsx`
       );
 
       document.body.appendChild(link);
@@ -250,7 +255,7 @@ export default function Assignment() {
               : `Đã nhận file. Đang tải lên... ${percent}%`,
           };
         });
-      });
+      }, duAn);
 
       setImportState((prev) => ({
         ...(prev || {}),
@@ -344,7 +349,7 @@ export default function Assignment() {
   const khoOptions = [
     ...new Set(
       assignments
-        .map((item) => officialKhoName(item.kho))
+        .map((item) => (hcm ? item.kho : officialKhoName(item.kho)))
         .filter(Boolean)
     ),
   ].sort((a, b) => a.localeCompare(b, "vi"));
@@ -398,7 +403,7 @@ export default function Assignment() {
           variant="h4"
           noWrap
         >
-          Phân công xe
+          {hcm ? "Phân công - Vùng HCM" : "Phân công - GXT"}
         </Typography>
 
         {isAdmin && (
@@ -504,7 +509,7 @@ export default function Assignment() {
           {isWarehouse && managedKhoList.length <= 1 ? (
             <TextField
               size="small"
-              label="Kho"
+              label={locationLabel}
               value={formatKhoLabel(managedKhoList) || "Chưa gán kho"}
               InputProps={{ readOnly: true }}
               sx={{ minWidth: 180, maxWidth: 280 }}
@@ -513,7 +518,7 @@ export default function Assignment() {
             <TextField
               select
               size="small"
-              label="Kho"
+              label={locationLabel}
               value={khoFilter}
               onChange={(e) =>
                 setKhoFilter(e.target.value)
@@ -521,12 +526,12 @@ export default function Assignment() {
               sx={{ minWidth: 180, maxWidth: 280 }}
             >
               <MenuItem value="">
-                {isWarehouse ? "Tất cả kho phụ trách" : "Tất cả"}
+                {isWarehouse ? "Tất cả kho phụ trách" : `Tất cả ${locationLabel.toLowerCase()}`}
               </MenuItem>
 
               {(isWarehouse ? managedKhoList : khoOptions).map((kho) => (
                 <MenuItem key={kho} value={kho}>
-                  {officialKhoName(kho)}
+                  {hcm ? kho : officialKhoName(kho)}
                 </MenuItem>
               ))}
             </TextField>
@@ -660,7 +665,7 @@ export default function Assignment() {
 
               <TableCell sx={{ whiteSpace: "nowrap" }}>Ngày</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Ca</TableCell>
-              <TableCell sx={{ whiteSpace: "nowrap" }}>Kho</TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>{locationLabel}</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Biển số</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Loại xe</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>MSNV</TableCell>
@@ -669,7 +674,7 @@ export default function Assignment() {
               <TableCell sx={{ whiteSpace: "nowrap" }}>Check In</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Check Out</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>Trạng thái</TableCell>
-              <TableCell sx={{ whiteSpace: "nowrap" }}>Kho xác nhận</TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>{confirmLabel}</TableCell>
 
               {isAdmin && (
                 <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
@@ -694,7 +699,7 @@ export default function Assignment() {
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
-      {officialKhoName(item.kho)}
+      {hcm ? item.kho : officialKhoName(item.kho)}
     </TableCell>
 
     <TableCell sx={{ whiteSpace: "nowrap" }}>
@@ -1008,6 +1013,7 @@ export default function Assignment() {
       <AssignmentDialog
         open={openDialog}
         assignment={editingAssignment}
+        duAn={duAn}
         onClose={() => {
           setOpenDialog(false);
           setEditingAssignment(null);

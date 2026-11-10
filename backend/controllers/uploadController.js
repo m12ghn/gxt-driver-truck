@@ -19,6 +19,7 @@ const {
 } = require("../utils/uploadToSupabase");
 const { normalizeKhoName } = require("../utils/ensureWarehouses");
 const { assertWarehouseAccess } = require("../utils/scopeHelpers");
+const { parseDuAn, isVungHcm } = require("../constants/projects");
 
 function cell(row, ...names) {
   const keys = Object.keys(row || {});
@@ -65,6 +66,8 @@ exports.importExcel = async (req, res) => {
       raw: true,
       defval: "",
     });
+    const duAn = parseDuAn(req.body?.duAn);
+    const hcm = isVungHcm(duAn);
 
     const vehicles = await Vehicle.findAll({
       attributes: ["id", "bienSo"],
@@ -130,13 +133,21 @@ exports.importExcel = async (req, res) => {
       const bienSo = String(cell(row, "Biển số", "Bien so") || "").trim();
       const msnv = normalizeMsnv(cell(row, "MSNV", "Msnv"));
       const ca = String(cell(row, "Ca") || "").trim();
-      const kho = normalizeKhoName(cell(row, "Kho"));
+      const khoRaw = cell(row, "Bưu cục", "Buu cuc", "Kho");
+      const kho = hcm ? String(khoRaw || "").trim() : normalizeKhoName(khoRaw);
 
-      try {
-        assertWarehouseAccess(req, kho);
-      } catch (scopeErr) {
-        errors.push(`Dòng ${i + 2}: ${scopeErr.message}`);
+      if (!kho) {
+        errors.push(`Dòng ${i + 2}: Thiếu ${hcm ? "bưu cục" : "kho"}.`);
         continue;
+      }
+
+      if (!hcm) {
+        try {
+          assertWarehouseAccess(req, kho);
+        } catch (scopeErr) {
+          errors.push(`Dòng ${i + 2}: ${scopeErr.message}`);
+          continue;
+        }
       }
 
       const plateKey = bienSo.replace(/\u00a0/g, " ").trim().toLowerCase();
@@ -213,6 +224,7 @@ exports.importExcel = async (req, res) => {
         ngay,
         ca,
         kho,
+        duAn,
         vehicleId: vehicle.id,
         driverId: driver.id,
         trangThai: "Chưa thực hiện",

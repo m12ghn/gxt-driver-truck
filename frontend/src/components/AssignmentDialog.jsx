@@ -8,6 +8,7 @@ import {
   officialWarehouseNames,
   shortKhoName,
 } from "../constants/warehouses";
+import { DU_AN_GXT, isVungHcm } from "../constants/projects";
 
 import {
   Dialog,
@@ -26,10 +27,13 @@ export default function AssignmentDialog({
   onClose,
   onSuccess,
   assignment,
+  duAn = DU_AN_GXT,
 }) {
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
+  const hcm = isVungHcm(duAn);
+  const locationLabel = hcm ? "Bưu cục" : "Kho";
+  const [khoOptions, setKhoOptions] = useState(hcm ? [] : fallbackWarehouses);
 
   const vietnamToday = () =>
     new Date().toLocaleDateString("en-CA", {
@@ -49,7 +53,7 @@ export default function AssignmentDialog({
 
     loadVehicles();
     loadDrivers();
-    loadWarehouses();
+    loadLocations();
 
     if (assignment) {
       setNgay(String(assignment.ngay || "").slice(0, 10) || vietnamToday());
@@ -78,10 +82,13 @@ export default function AssignmentDialog({
   // Lấy danh sách kho thực tế từ bảng Warehouses (Supabase) thay vì dùng
   // danh sách cố định trong code — fallbackWarehouses chỉ dùng khi API
   // lỗi hoặc bảng Warehouses chưa có dữ liệu.
-  async function loadWarehouses() {
+  async function loadLocations() {
     try {
-      const res = await getWarehouses();
-      const list = officialWarehouseNames(res.data?.data || []);
+      const res = await getWarehouses(hcm ? "BUU_CUC" : "KHO");
+      const names = (res.data?.data || [])
+        .map((item) => item?.ten || item)
+        .filter(Boolean);
+      const list = hcm ? [...new Set(names)] : officialWarehouseNames(names);
       if (list.length) {
         setKhoOptions(list);
         setKho((prev) => {
@@ -123,6 +130,7 @@ export default function AssignmentDialog({
         ngay,
         ca,
         kho,
+        duAn,
         vehicleId: Number(vehicleId),
         driverId: Number(driverId),
       };
@@ -182,7 +190,13 @@ export default function AssignmentDialog({
       maxWidth="sm"
     >
       <DialogTitle>
-        {isEdit ? "Sửa phân công" : "Thêm phân công"}
+        {isEdit
+          ? hcm
+            ? "Sửa phân công - Vùng HCM"
+            : "Sửa phân công - GXT"
+          : hcm
+            ? "Thêm phân công - Vùng HCM"
+            : "Thêm phân công - GXT"}
       </DialogTitle>
 
       <DialogContent>
@@ -219,7 +233,7 @@ export default function AssignmentDialog({
           <Grid size={{ xs: 12 }}>
             <TextField
               select
-              label="Kho"
+              label={locationLabel}
               fullWidth
               value={kho}
               onChange={(e) => setKho(e.target.value)}

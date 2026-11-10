@@ -14,6 +14,12 @@ const Warehouse = sequelize.define("Warehouse", {
     unique: true,
   },
 
+  loai: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: "KHO",
+  },
+
   latitude: {
     type: DataTypes.FLOAT,
     allowNull: false,

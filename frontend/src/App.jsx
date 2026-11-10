@@ -15,6 +15,7 @@ import GpsMap from "./pages/GpsMap";
 import Warehouse from "./pages/Warehouse";
 import User from "./pages/User";
 import Forbidden from "./pages/Forbidden";
+import { DU_AN_GXT, DU_AN_VUNG_HCM } from "./constants/projects";
 
 export default function App() {
 
@@ -134,7 +135,21 @@ export default function App() {
                 "WAREHOUSE",
               ]}
             >
-              <Assignment />
+              <Assignment duAn={DU_AN_GXT} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/assignments-hcm"
+          element={
+            <PrivateRoute
+              roles={[
+                "SUPER_ADMIN",
+                "ADMIN",
+              ]}
+            >
+              <Assignment duAn={DU_AN_VUNG_HCM} />
             </PrivateRoute>
           }
         />

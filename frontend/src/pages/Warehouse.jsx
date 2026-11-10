@@ -14,6 +14,9 @@ import {
   CircularProgress,
   Button,
   Stack,
+  TextField,
+  MenuItem,
+  Chip,
 } from "@mui/material";
 
 export default function Warehouse() {
@@ -21,6 +24,7 @@ export default function Warehouse() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [loaiFilter, setLoaiFilter] = useState("");
 
   useEffect(() => {
     loadWarehouses();
@@ -57,17 +61,31 @@ export default function Warehouse() {
         gap={1.5}
       >
         <Typography variant="h5" fontWeight={700}>
-          Quản lý kho
+          Quản lý kho/bưu cục
         </Typography>
-        <Button
-          variant="contained"
-          onClick={() => {
-            setSelected(null);
-            setOpenDialog(true);
-          }}
-        >
-          + THÊM KHO
-        </Button>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TextField
+            select
+            size="small"
+            label="Loại"
+            value={loaiFilter}
+            onChange={(e) => setLoaiFilter(e.target.value)}
+            sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="">Tất cả</MenuItem>
+            <MenuItem value="KHO">Kho</MenuItem>
+            <MenuItem value="BUU_CUC">Bưu cục</MenuItem>
+          </TextField>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setSelected(null);
+              setOpenDialog(true);
+            }}
+          >
+            + THÊM
+          </Button>
+        </Stack>
       </Stack>
       </Box>
 
@@ -76,8 +94,9 @@ export default function Warehouse() {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell>ID kho</TableCell>
-              <TableCell>Tên kho</TableCell>
+              <TableCell>ID</TableCell>
+              <TableCell>Loại</TableCell>
+              <TableCell>Tên</TableCell>
               <TableCell>Latitude</TableCell>
               <TableCell>Longitude</TableCell>
               <TableCell>Bán kính (m)</TableCell>
@@ -85,9 +104,19 @@ export default function Warehouse() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {warehouses.map((item) => (
+            {warehouses
+              .filter((item) => !loaiFilter || (item.loai || "KHO") === loaiFilter)
+              .map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell>{item.idKho || "—"}</TableCell>
+                <TableCell>
+                  <Chip
+                    size="small"
+                    label={item.loai === "BUU_CUC" ? "Bưu cục" : "Kho"}
+                    color={item.loai === "BUU_CUC" ? "warning" : "success"}
+                    variant="outlined"
+                  />
+                </TableCell>
                 <TableCell>{item.ten}</TableCell>
                 <TableCell>{item.latitude}</TableCell>
                 <TableCell>{item.longitude}</TableCell>
@@ -100,7 +129,7 @@ export default function Warehouse() {
                       setOpenDialog(true);
                     }}
                   >
-                    Sửa GPS
+                    Sửa
                   </Button>
                 </TableCell>
               </TableRow>
