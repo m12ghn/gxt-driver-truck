@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAssignments } from "../api/assignmentApi";
 import { getCheckInStatus } from "../utils/shiftHelpers";
+import { assignmentDuAnForUser } from "../utils/userScope";
 
 import CheckInDialog from "../components/CheckInDialog";
 import CheckInDetailDialog from "../components/CheckInDetailDialog";
@@ -57,7 +58,11 @@ export default function CheckIn() {
 
   async function loadAssignments() {
     try {
-      const res = await getAssignments(fromDate, toDate);
+      const res = await getAssignments(
+        fromDate,
+        toDate,
+        assignmentDuAnForUser(user)
+      );
       setAssignments(res.data.data || []);
     } catch (err) {
       console.error(err);

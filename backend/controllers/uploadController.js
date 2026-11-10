@@ -277,13 +277,11 @@ exports.importExcel = async (req, res) => {
 
       const kho = resolved.ten;
 
-      if (!hcm) {
-        try {
-          assertWarehouseAccess(req, kho);
-        } catch (scopeErr) {
-          errors.push(`Dòng ${i + 2}: ${scopeErr.message}`);
-          continue;
-        }
+      try {
+        assertWarehouseAccess(req, kho);
+      } catch (scopeErr) {
+        errors.push(`Dòng ${i + 2}: ${scopeErr.message}`);
+        continue;
       }
 
       const plateKey = bienSo.replace(/\u00a0/g, " ").trim().toLowerCase();

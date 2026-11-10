@@ -36,6 +36,11 @@ const User = sequelize.define("User", {
     allowNull: true,
   },
 
+  loaiViTri: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+
   khoList: {
     type: DataTypes.VIRTUAL,
     get() {

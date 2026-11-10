@@ -22,6 +22,7 @@ const {
   applyWarehouseScope,
   assertWarehouseAccess,
   assertWarehouseKhoChoice,
+  isLocationScoped,
 } = require("../utils/scopeHelpers");
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
@@ -401,7 +402,10 @@ exports.createAssignment = async (req, res) => {
     try {
       if (isVungHcm(duAn)) {
         kho = String(kho || "").trim();
-      } else if (req.user?.quyen === "WAREHOUSE") {
+        if (isLocationScoped(req.user)) {
+          assertWarehouseAccess(req, kho);
+        }
+      } else if (isLocationScoped(req.user)) {
         kho = assertWarehouseKhoChoice(req, kho);
       } else {
         kho = normalizeKhoName(kho);
@@ -899,7 +903,10 @@ exports.updateAssignment = async (req, res) => {
     try {
       if (isVungHcm(duAn)) {
         kho = String(kho || "").trim();
-      } else if (req.user?.quyen === "WAREHOUSE") {
+        if (isLocationScoped(req.user)) {
+          assertWarehouseAccess(req, kho);
+        }
+      } else if (isLocationScoped(req.user)) {
         kho = assertWarehouseKhoChoice(req, kho);
       } else {
         kho = normalizeKhoName(kho);

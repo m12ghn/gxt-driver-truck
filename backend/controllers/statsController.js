@@ -17,6 +17,7 @@ const {
   assertWarehouseAccess,
   parseKhoList,
   userKhoValue,
+  isLocationScoped,
 } = require("../utils/scopeHelpers");
 const {
   getCheckInStatus,
@@ -105,7 +106,7 @@ function listDays(from, to) {
 function resolveDashboardKhoFilter(req, khoQuery) {
   const requested = parseQueryKhoList(khoQuery);
 
-  if (req.user?.quyen === "WAREHOUSE") {
+  if (isLocationScoped(req.user)) {
     const chosen = requested.length
       ? requested.filter((name) => {
           try {
@@ -582,7 +583,7 @@ exports.getReportStats = async (req, res) => {
     if (!from) from = today;
     if (!to) to = from;
 
-    if (req.user?.quyen === "WAREHOUSE") {
+    if (isLocationScoped(req.user)) {
       if (kho) {
         try {
           assertWarehouseAccess(req, kho);
@@ -625,7 +626,7 @@ exports.exportReportExcel = async (req, res) => {
     if (!from) from = today;
     if (!to) to = from;
 
-    if (req.user?.quyen === "WAREHOUSE") {
+    if (isLocationScoped(req.user)) {
       if (kho) {
         try {
           assertWarehouseAccess(req, kho);

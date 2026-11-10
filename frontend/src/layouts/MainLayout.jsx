@@ -41,6 +41,7 @@ import GhnLogo from "../components/GhnLogo";
 import { getAlerts } from "../api/statsApi";
 import { brand } from "../theme/brand";
 import { useColorMode } from "../theme/ColorModeContext";
+import { canOpenGxt, canOpenHcm, isLocationScoped } from "../utils/userScope";
 
 const drawerWidth = 220;
 const ALERT_POLL_MS = 45000;
@@ -138,7 +139,7 @@ export default function MainLayout() {
       text: "Phân công - Vùng HCM",
       icon: <AssignmentIcon />,
       path: "/assignments-hcm",
-      roles: ["SUPER_ADMIN", "ADMIN"],
+      roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
     },
     {
       text: "Check In",
@@ -202,7 +203,18 @@ export default function MainLayout() {
 
         <List sx={{ px: 1.5, py: 2, flex: 1, overflowY: "auto" }}>
           {menus
-            .filter((menu) => menu.roles.includes(user?.quyen))
+            .filter((menu) => {
+              if (!menu.roles.includes(user?.quyen)) return false;
+              if (menu.path === "/assignments") return canOpenGxt(user);
+              if (menu.path === "/assignments-hcm") return canOpenHcm(user);
+              if (
+                ["/vehicles", "/drivers", "/warehouses"].includes(menu.path) &&
+                isLocationScoped(user)
+              ) {
+                return false;
+              }
+              return true;
+            })
             .map((menu) => {
               const selected = location.pathname === menu.path;
               const badge = menu.badge || 0;

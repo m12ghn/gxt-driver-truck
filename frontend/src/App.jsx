@@ -147,6 +147,7 @@ export default function App() {
               roles={[
                 "SUPER_ADMIN",
                 "ADMIN",
+                "WAREHOUSE",
               ]}
             >
               <Assignment duAn={DU_AN_VUNG_HCM} />

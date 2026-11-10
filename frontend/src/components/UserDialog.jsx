@@ -26,10 +26,31 @@ import {
 import { getWarehouses } from "../api/warehouseApi";
 import {
   warehouses as fallbackWarehouses,
-  officialWarehouseNames,
   parseKhoList,
   shortKhoName,
 } from "../constants/warehouses";
+import { parseLoaiViTri } from "../utils/userScope";
+
+function asLocationOptions(list) {
+  return (list || [])
+    .map((item) =>
+      typeof item === "string"
+        ? { ten: item, loai: "KHO", idKho: "" }
+        : {
+            ten: item?.ten || "",
+            loai: item?.loai === "BUU_CUC" ? "BUU_CUC" : "KHO",
+            idKho: item?.idKho || "",
+          }
+    )
+    .filter((item) => item.ten)
+    .sort((a, b) => a.ten.localeCompare(b.ten, "vi"));
+}
+
+function locationLabel(item) {
+  const ten = typeof item === "string" ? item : item?.ten || "";
+  const short = shortKhoName(ten);
+  return short || ten;
+}
 
 export default function UserDialog({
   open,
@@ -41,15 +62,18 @@ export default function UserDialog({
   const [hoTen, setHoTen] = useState("");
   const [soDienThoai, setSoDienThoai] = useState("");
   const [quyen, setQuyen] = useState("");
+  const [loaiViTri, setLoaiViTri] = useState("");
   const [khoList, setKhoList] = useState([]);
-  const [khoOptions, setKhoOptions] = useState(fallbackWarehouses);
+  const [khoOptions, setKhoOptions] = useState(
+    asLocationOptions(fallbackWarehouses)
+  );
 
   useEffect(() => {
     if (!open) return;
 
     getWarehouses()
       .then((res) => {
-        const list = officialWarehouseNames(res.data?.data || []);
+        const list = asLocationOptions(res.data?.data || []);
         if (list.length) setKhoOptions(list);
       })
       .catch(() => {});
@@ -59,6 +83,7 @@ export default function UserDialog({
       setHoTen(user.hoTen);
       setSoDienThoai(user.soDienThoai);
       setQuyen(user.quyen);
+      setLoaiViTri(parseLoaiViTri(user.loaiViTri));
       setKhoList(parseKhoList(user.khoList?.length ? user.khoList : user.kho));
     } else {
       resetForm();
@@ -70,21 +95,28 @@ export default function UserDialog({
     if (!current.length || !khoOptions.length) return;
     const mapped = current.map((name) => {
       const short = shortKhoName(name);
-      return (
-        khoOptions.find((item) => item === name || shortKhoName(item) === short) ||
-        name
+      const matched = khoOptions.find(
+        (item) => item.ten === name || shortKhoName(item.ten) === short
       );
+      return matched?.ten || name;
     });
     if (mapped.some((name, index) => name !== current[index])) {
       setKhoList(mapped);
     }
-  }, [khoOptions, khoList]);
+    if (!loaiViTri) {
+      const matched = khoOptions.find((item) => mapped.includes(item.ten));
+      if (matched) {
+        setLoaiViTri(matched.loai === "BUU_CUC" ? "BUU_CUC" : "KHO");
+      }
+    }
+  }, [khoOptions, khoList, loaiViTri]);
 
   function resetForm() {
     setMsnv("");
     setHoTen("");
     setSoDienThoai("");
     setQuyen("");
+    setLoaiViTri("");
     setKhoList([]);
   }
 
@@ -94,8 +126,17 @@ export default function UserDialog({
       return;
     }
 
-    if (quyen === "WAREHOUSE" && !khoList.length) {
-      alert("Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.");
+    if (!loaiViTri) {
+      alert("Vui lòng chọn loại vị trí: Kho hoặc Bưu cục.");
+      return;
+    }
+
+    if (!khoList.length) {
+      alert(
+        loaiViTri === "BUU_CUC"
+          ? "Vui lòng chọn ít nhất một bưu cục phụ trách."
+          : "Vui lòng chọn ít nhất một kho phụ trách."
+      );
       return;
     }
 
@@ -105,7 +146,8 @@ export default function UserDialog({
         hoTen,
         soDienThoai,
         quyen,
-        kho: quyen === "WAREHOUSE" ? khoList : null,
+        loaiViTri,
+        kho: khoList,
       };
 
       if (user) {
@@ -170,26 +212,43 @@ export default function UserDialog({
             <TextField
               select
               fullWidth
+              label="Loại vị trí"
+              value={loaiViTri}
+              onChange={(e) => {
+                setLoaiViTri(e.target.value);
+                setKhoList([]);
+              }}
+            >
+              <MenuItem value="KHO">Kho</MenuItem>
+              <MenuItem value="BUU_CUC">Bưu cục</MenuItem>
+            </TextField>
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              select
+              fullWidth
               label="Quyền"
               value={quyen}
-              onChange={(e) => {
-                setQuyen(e.target.value);
-                if (e.target.value !== "WAREHOUSE") setKhoList([]);
-              }}
+              onChange={(e) => setQuyen(e.target.value)}
             >
               <MenuItem value="ADMIN">ADMIN</MenuItem>
               <MenuItem value="WAREHOUSE">WAREHOUSE</MenuItem>
             </TextField>
           </Grid>
 
-          {quyen === "WAREHOUSE" && (
+          {loaiViTri && (
             <Grid size={{ xs: 12 }}>
               <FormControl fullWidth>
-                <InputLabel id="user-kho-label">Kho phụ trách</InputLabel>
+                <InputLabel id="user-kho-label">
+                  {loaiViTri === "BUU_CUC" ? "Bưu cục phụ trách" : "Kho phụ trách"}
+                </InputLabel>
                 <Select
                   labelId="user-kho-label"
                   multiple
-                  label="Kho phụ trách"
+                  label={
+                    loaiViTri === "BUU_CUC" ? "Bưu cục phụ trách" : "Kho phụ trách"
+                  }
                   value={Array.isArray(khoList) ? khoList : []}
                   onChange={(e) => {
                     const next = e.target.value;
@@ -203,26 +262,36 @@ export default function UserDialog({
                         <Chip
                           key={value}
                           size="small"
-                          label={shortKhoName(value)}
+                          label={locationLabel(value)}
                         />
                       ))}
                     </Box>
                   )}
                 >
-                  {khoOptions.map((item) => (
-                    <MenuItem key={item} value={item}>
+                  {khoOptions
+                    .filter((item) =>
+                      loaiViTri === "BUU_CUC"
+                        ? item.loai === "BUU_CUC"
+                        : item.loai !== "BUU_CUC"
+                    )
+                    .map((item) => (
+                    <MenuItem key={item.ten} value={item.ten}>
                       <Checkbox
-                        checked={parseKhoList(khoList).includes(item)}
+                        checked={parseKhoList(khoList).includes(item.ten)}
                       />
                       <ListItemText
-                        primary={shortKhoName(item)}
-                        secondary={item}
+                        primary={locationLabel(item)}
+                        secondary={[item.idKho, item.ten !== locationLabel(item) ? item.ten : ""]
+                          .filter(Boolean)
+                          .join(" · ")}
                       />
                     </MenuItem>
                   ))}
                 </Select>
                 <FormHelperText>
-                  Có thể chọn nhiều kho nếu quản lý hơn 1 kho
+                  {loaiViTri === "BUU_CUC"
+                    ? "Tài khoản chỉ xem dữ liệu bưu cục đã chọn"
+                    : "Tài khoản chỉ xem dữ liệu kho đã chọn"}
                 </FormHelperText>
               </FormControl>
             </Grid>

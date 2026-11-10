@@ -42,6 +42,7 @@ import {
   shortKhoName,
 } from "../constants/warehouses";
 import { brand } from "../theme/brand";
+import { isLocationScoped } from "../utils/userScope";
 
 function SectionHeading({ icon, children, hint }) {
   return (
@@ -106,7 +107,7 @@ export default function Report() {
   const today = new Date().toISOString().split("T")[0];
   const firstOfMonth = today.slice(0, 8) + "01";
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const isWarehouse = user?.quyen === "WAREHOUSE";
+  const isWarehouse = isLocationScoped(user);
   const userKhoList = parseKhoList(user?.khoList || user?.kho);
 
   const [fromDate, setFromDate] = useState(firstOfMonth);

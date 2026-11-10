@@ -35,18 +35,20 @@ export default function UserTable({
     },
     {
       field: "kho",
-      headerName: "Kho phụ trách",
+      headerName: "Kho/bưu cục phụ trách",
       flex: 1.2,
       minWidth: 200,
       sortable: false,
       valueGetter: (value, row) =>
-        row.quyen === "WAREHOUSE"
+        ["ADMIN", "WAREHOUSE"].includes(row.quyen)
           ? formatKhoLabel(row.khoList || row.kho)
           : "",
       renderCell: (params) => {
-        if (params.row.quyen !== "WAREHOUSE") return "—";
+        if (!["ADMIN", "WAREHOUSE"].includes(params.row.quyen)) return "—";
         const list = parseKhoList(params.row.khoList || params.row.kho);
         if (!list.length) return "—";
+        const loai =
+          params.row.loaiViTri === "BUU_CUC" ? "Bưu cục" : "Kho";
         return (
           <Stack
             direction="row"
@@ -54,7 +56,9 @@ export default function UserTable({
             flexWrap="wrap"
             useFlexGap
             sx={{ py: 0.5 }}
+            alignItems="center"
           >
+            <Chip size="small" variant="outlined" label={loai} />
             {list.map((kho) => (
               <Chip key={kho} size="small" label={shortKhoName(kho)} />
             ))}

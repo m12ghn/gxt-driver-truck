@@ -51,6 +51,7 @@ import {
   shortKhoName,
   warehouses as fallbackWarehouses,
 } from "../constants/warehouses";
+import { isLocationScoped } from "../utils/userScope";
 
 const REFRESH_MS = 45000;
 
@@ -181,13 +182,14 @@ export default function Dashboard() {
   const user = JSON.parse(localStorage.getItem("user"));
   const todayStr = vietnamToday();
   const isWarehouse = user?.quyen === "WAREHOUSE";
+  const isScoped = isLocationScoped(user);
   const managedKhoList = parseKhoList(user?.khoList || user?.kho);
 
   const [fromDate, setFromDate] = useState(todayStr);
   const [toDate, setToDate] = useState(todayStr);
   const [selectedKho, setSelectedKho] = useState([]);
   const [khoOptions, setKhoOptions] = useState(
-    isWarehouse && managedKhoList.length ? managedKhoList : fallbackWarehouses
+    isScoped && managedKhoList.length ? managedKhoList : fallbackWarehouses
   );
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState({ counts: {}, items: [] });
@@ -202,7 +204,7 @@ export default function Dashboard() {
     getWarehouses()
       .then((res) => {
         const list = officialWarehouseNames(res.data?.data || []);
-        if (isWarehouse && managedKhoList.length) {
+        if (isScoped && managedKhoList.length) {
           setKhoOptions(
             list.filter((name) =>
               managedKhoList.some(
@@ -421,7 +423,7 @@ export default function Dashboard() {
               Tổng quan hoạt động
               {selectedKho.length
                 ? ` · ${selectedKho.map(shortKhoName).join(" · ")}`
-                : user?.quyen === "WAREHOUSE" &&
+                : isScoped &&
                   formatKhoLabel(
                     stats.khoList || stats.kho || user?.khoList || user?.kho
                   )
@@ -508,7 +510,7 @@ export default function Dashboard() {
             onChange={(e) => setToDate(e.target.value || todayStr)}
             sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
-          {isWarehouse && khoOptions.length <= 1 ? (
+          {isScoped && khoOptions.length <= 1 ? (
             <TextField
               size="small"
               label="Kho"

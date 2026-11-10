@@ -32,6 +32,7 @@ async function attachUser(req, res, next) {
         quyen: "SUPER_ADMIN",
         kho: null,
         khoList: [],
+        loaiViTri: null,
       };
       return next();
     }
@@ -63,6 +64,7 @@ async function attachUser(req, res, next) {
       quyen: user.quyen,
       kho: khoList.length ? khoList : user.kho,
       khoList,
+      loaiViTri: user.loaiViTri || null,
     };
 
     next();

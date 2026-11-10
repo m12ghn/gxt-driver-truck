@@ -125,8 +125,23 @@ function userKhoValue(user) {
   return user.kho || null;
 }
 
+function parseLoaiViTri(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (raw === "BUU_CUC") return "BUU_CUC";
+  if (raw === "KHO") return "KHO";
+  return "";
+}
+
+function isLocationScoped(user) {
+  const quyen = String(user?.quyen || "").toUpperCase();
+  if (quyen === "SUPER_ADMIN" || quyen === "DRIVER") return false;
+  if (quyen === "WAREHOUSE") return true;
+  if (quyen === "ADMIN") return parseKhoList(userKhoValue(user)).length > 0;
+  return false;
+}
+
 function applyWarehouseScope(req, where = {}) {
-  if (req.user?.quyen === "WAREHOUSE") {
+  if (isLocationScoped(req.user)) {
     where.kho = warehouseKhoFilter(userKhoValue(req.user));
   }
 
@@ -134,21 +149,24 @@ function applyWarehouseScope(req, where = {}) {
 }
 
 function assertWarehouseAccess(req, assignmentKho) {
-  if (req.user?.quyen !== "WAREHOUSE") return;
+  if (!isLocationScoped(req.user)) return;
 
   const allowed = getUserKhoVariants(userKhoValue(req.user));
-  const target = getKhoNameVariants(normalizeKhoName(assignmentKho));
-  const ok = target.some((item) => allowed.includes(item));
+  const target = new Set([
+    ...getKhoNameVariants(assignmentKho),
+    ...getKhoNameVariants(normalizeKhoName(assignmentKho)),
+  ]);
+  const ok = [...target].some((item) => allowed.includes(item));
 
   if (!parseKhoList(userKhoValue(req.user)).length || !ok) {
-    const err = new Error("Bạn chỉ được thao tác dữ liệu kho của mình.");
+    const err = new Error("Bạn chỉ được thao tác dữ liệu của điểm mình phụ trách.");
     err.status = 403;
     throw err;
   }
 }
 
 function getScopedKho(req) {
-  if (req.user?.quyen === "WAREHOUSE") {
+  if (isLocationScoped(req.user)) {
     return userKhoValue(req.user);
   }
 
@@ -156,11 +174,11 @@ function getScopedKho(req) {
 }
 
 function assertWarehouseKhoChoice(req, kho) {
-  if (req.user?.quyen !== "WAREHOUSE") return normalizeKhoName(kho);
+  if (!isLocationScoped(req.user)) return normalizeKhoName(kho);
 
   const list = parseKhoList(userKhoValue(req.user));
   if (!list.length) {
-    const err = new Error("Tài khoản kho chưa được gán kho phụ trách.");
+    const err = new Error("Tài khoản chưa được gán kho/bưu cục phụ trách.");
     err.status = 403;
     throw err;
   }
@@ -180,4 +198,6 @@ module.exports = {
   getScopedKho,
   warehouseKhoFilter,
   userKhoValue,
+  parseLoaiViTri,
+  isLocationScoped,
 };

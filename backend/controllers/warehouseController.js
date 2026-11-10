@@ -1,6 +1,10 @@
 const { Op } = require("sequelize");
 const Warehouse = require("../models/Warehouse");
-const { getUserKhoVariants, userKhoValue } = require("../utils/scopeHelpers");
+const {
+  getUserKhoVariants,
+  userKhoValue,
+  isLocationScoped,
+} = require("../utils/scopeHelpers");
 const { ensureWarehouseColumns } = require("../utils/ensureWarehouseColumns");
 const {
   recalculateAssignmentGpsForWarehouse,
@@ -13,7 +17,7 @@ exports.getWarehouses = async (req, res) => {
 
     const where = {};
 
-    if (req.user?.quyen === "WAREHOUSE") {
+    if (isLocationScoped(req.user)) {
       const variants = getUserKhoVariants(userKhoValue(req.user));
       where.ten = variants.length ? { [Op.in]: variants } : "__NO_KHO__";
     }

@@ -44,6 +44,7 @@ import {
   officialWarehouseNames,
 } from "../constants/warehouses";
 import { DU_AN_GXT, isVungHcm } from "../constants/projects";
+import { isLocationScoped } from "../utils/userScope";
 
 export default function Assignment({ duAn = DU_AN_GXT }) {
 
@@ -57,6 +58,7 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
 
   const isWarehouse =
     user?.quyen === "WAREHOUSE";
+  const isScoped = isLocationScoped(user);
 
   const hcm = isVungHcm(duAn);
   const locationLabel = hcm ? "Bưu cục" : "Kho";
@@ -130,14 +132,14 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
   const [importState, setImportState] = useState(null);
 
   useEffect(() => {
-    if (!isWarehouse) return;
+    if (!isScoped) return;
     getWarehouses()
       .then((res) => {
         const list = officialWarehouseNames(res.data?.data || []);
         if (list.length) setManagedKhoList(list);
       })
       .catch(() => {});
-  }, [isWarehouse]);
+  }, [isScoped]);
 
   useEffect(() => {
 
@@ -506,7 +508,7 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
             sx={{ width: 250 }}
           />
 
-          {isWarehouse && managedKhoList.length <= 1 ? (
+          {isScoped && managedKhoList.length <= 1 ? (
             <TextField
               size="small"
               label={locationLabel}
@@ -526,10 +528,10 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
               sx={{ minWidth: 180, maxWidth: 280 }}
             >
               <MenuItem value="">
-                {isWarehouse ? "Tất cả kho phụ trách" : `Tất cả ${locationLabel.toLowerCase()}`}
+                {isScoped ? `Tất cả ${locationLabel.toLowerCase()} phụ trách` : `Tất cả ${locationLabel.toLowerCase()}`}
               </MenuItem>
 
-              {(isWarehouse ? managedKhoList : khoOptions).map((kho) => (
+              {(isScoped ? managedKhoList : khoOptions).map((kho) => (
                 <MenuItem key={kho} value={kho}>
                   {hcm ? kho : officialKhoName(kho)}
                 </MenuItem>

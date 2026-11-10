@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getAssignments } from "../api/assignmentApi";
+import { assignmentDuAnForUser } from "../utils/userScope";
 
 import CheckOutDialog from "../components/CheckOutDialog";
 import CheckOutDetailDialog from "../components/CheckOutDetailDialog";
@@ -60,7 +61,11 @@ export default function CheckOut() {
 
   async function loadAssignments() {
     try {
-      const res = await getAssignments(fromDate, toDate);
+      const res = await getAssignments(
+        fromDate,
+        toDate,
+        assignmentDuAnForUser(user)
+      );
       setAssignments(res.data.data || []);
     } catch (err) {
       console.error(err);

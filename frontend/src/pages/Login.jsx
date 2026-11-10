@@ -13,6 +13,7 @@ import {
 
 import GhnLogo from "../components/GhnLogo";
 import { brand } from "../theme/brand";
+import { homePath } from "../utils/userScope";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -38,10 +39,7 @@ export default function Login() {
       const loggedIn = res.data.data;
       localStorage.setItem("user", JSON.stringify(loggedIn));
 
-      // WAREHOUSE vào Phân công; admin vào Dashboard
-      navigate(
-        loggedIn?.quyen === "WAREHOUSE" ? "/assignments" : "/dashboard"
-      );
+      navigate(homePath(loggedIn));
     } catch (err) {
       alert(err.response?.data?.message || "Đăng nhập thất bại!");
     } finally {

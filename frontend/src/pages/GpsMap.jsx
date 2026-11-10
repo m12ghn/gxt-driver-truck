@@ -25,7 +25,8 @@ import "../utils/mapIcons.css";
 
 import { getAssignments } from "../api/assignmentApi";
 import { getWarehouses } from "../api/warehouseApi";
-import { officialWarehouseNames, formatKhoLabel, shortKhoName, khoMatches } from "../constants/warehouses";
+import { formatKhoLabel, shortKhoName, khoMatches } from "../constants/warehouses";
+import { assignmentDuAnForUser, isLocationScoped } from "../utils/userScope";
 import { brand } from "../theme/brand";
 import {
   warehouseIcon,
@@ -61,7 +62,7 @@ function FitAll({ points }) {
 
 export default function GpsMap() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const isWarehouse = user?.quyen === "WAREHOUSE";
+  const isWarehouse = isLocationScoped(user);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -78,13 +79,11 @@ export default function GpsMap() {
     setLoading(true);
     try {
       const [aRes, wRes] = await Promise.all([
-        getAssignments(today, today),
+        getAssignments(today, today, assignmentDuAnForUser(user)),
         getWarehouses(),
       ]);
       setAssignments(aRes.data.data || []);
-      const all = wRes.data.data || [];
-      const official = new Set(officialWarehouseNames(all));
-      setWarehouses(all.filter((w) => official.has(w.ten)));
+      setWarehouses(wRes.data.data || []);
     } catch (err) {
       console.error(err);
     } finally {

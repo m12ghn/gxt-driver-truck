@@ -1,11 +1,28 @@
 const User = require("../models/User");
-const { parseKhoList, serializeKhoList } = require("../utils/scopeHelpers");
+const {
+  serializeKhoList,
+  parseLoaiViTri,
+} = require("../utils/scopeHelpers");
 const { ensureUserKhoColumn } = require("../utils/ensureUserKhoColumn");
 const { hashPassword } = require("../utils/password");
 
-function resolveWarehouseKho(quyen, kho) {
-  if (quyen !== "WAREHOUSE") return null;
-  return serializeKhoList(kho);
+function resolveUserLocations(quyen, kho, loaiViTri) {
+  if (quyen !== "ADMIN" && quyen !== "WAREHOUSE") {
+    return { kho: null, loaiViTri: null };
+  }
+
+  const list = serializeKhoList(kho);
+  const loai = parseLoaiViTri(loaiViTri);
+
+  if (!list || !loai) {
+    const err = new Error(
+      "Vui lòng chọn loại (Kho hoặc Bưu cục) và ít nhất một điểm phụ trách."
+    );
+    err.status = 400;
+    throw err;
+  }
+
+  return { kho: list, loaiViTri: loai };
 }
 
 // ==========================
@@ -42,6 +59,7 @@ exports.create = async (req, res) => {
       soDienThoai,
       quyen,
       kho,
+      loaiViTri,
     } = req.body;
 
     // Không cho tạo DRIVER từ màn User
@@ -52,10 +70,13 @@ exports.create = async (req, res) => {
       });
     }
 
-    if (quyen === "WAREHOUSE" && !parseKhoList(kho).length) {
-      return res.status(400).json({
+    let scope;
+    try {
+      scope = resolveUserLocations(quyen, kho, loaiViTri);
+    } catch (scopeErr) {
+      return res.status(scopeErr.status || 400).json({
         success: false,
-        message: "Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.",
+        message: scopeErr.message,
       });
     }
 
@@ -92,7 +113,8 @@ exports.create = async (req, res) => {
       matKhau: hashPassword(msnv),
 
       quyen,
-      kho: resolveWarehouseKho(quyen, kho),
+      kho: scope.kho,
+      loaiViTri: scope.loaiViTri,
 
       trangThai: "Hoạt động",
     });
@@ -125,6 +147,7 @@ exports.update = async (req, res) => {
       soDienThoai,
       quyen,
       kho,
+      loaiViTri,
       trangThai,
     } = req.body;
 
@@ -145,10 +168,13 @@ exports.update = async (req, res) => {
       });
     }
 
-    if (quyen === "WAREHOUSE" && !parseKhoList(kho).length) {
-      return res.status(400).json({
+    let scope;
+    try {
+      scope = resolveUserLocations(quyen, kho, loaiViTri);
+    } catch (scopeErr) {
+      return res.status(scopeErr.status || 400).json({
         success: false,
-        message: "Vui lòng chọn ít nhất một kho phụ trách cho tài khoản WAREHOUSE.",
+        message: scopeErr.message,
       });
     }
 
@@ -185,7 +211,8 @@ exports.update = async (req, res) => {
       matKhau: hashPassword(msnv),
 
       quyen,
-      kho: resolveWarehouseKho(quyen, kho),
+      kho: scope.kho,
+      loaiViTri: scope.loaiViTri,
       trangThai,
     });
 
