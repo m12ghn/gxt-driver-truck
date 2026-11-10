@@ -19,7 +19,7 @@ function isVungHcm(duAn) {
 function duAnWhere(duAn) {
   const { Op } = require("sequelize");
   if (isVungHcm(duAn)) return DU_AN_VUNG_HCM;
-  return { [Op.or]: [{ duAn: DU_AN_GXT }, { duAn: null }, { duAn: "" }] };
+  return { [Op.or]: [DU_AN_GXT, null, ""] };
 }
 
 module.exports = {
