@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAssignments } from "../api/assignmentApi";
 import { assignmentDuAnForUser } from "../utils/userScope";
+import { getCheckOutStatus } from "../utils/shiftHelpers";
 
 import CheckOutDialog from "../components/CheckOutDialog";
 import CheckOutDetailDialog from "../components/CheckOutDetailDialog";
@@ -242,6 +243,34 @@ export default function CheckOut() {
 
                 <TableCell>
                   {formatDateTime(item.checkOutTime)}
+
+                  {item.checkOutTime
+                    ? (() => {
+                        const status = getCheckOutStatus(
+                          item.checkOutTime,
+                          item.ngay,
+                          item.ca
+                        );
+                        if (!status) return null;
+                        return (
+                          <Chip
+                            size="small"
+                            sx={{ ml: 1 }}
+                            label={status.label}
+                            color={status.late ? "error" : "success"}
+                          />
+                        );
+                      })()
+                    : item.trangThai === "Chưa hoàn thành"
+                    ? (
+                        <Chip
+                          size="small"
+                          sx={{ ml: 1 }}
+                          label="Quá hạn chưa Check Out"
+                          color="error"
+                        />
+                      )
+                    : null}
                 </TableCell>
 
                 <TableCell align="center">

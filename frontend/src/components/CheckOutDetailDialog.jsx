@@ -9,9 +9,11 @@ import {
   Grid,
   Divider,
   Alert,
+  Chip,
 } from "@mui/material";
 
 import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
+import { getCheckOutStatus } from "../utils/shiftHelpers";
 
 export default function CheckOutDetailDialog({
   open,
@@ -19,6 +21,12 @@ export default function CheckOutDetailDialog({
   assignment,
 }) {
   if (!assignment) return null;
+
+  const checkOutStatus = getCheckOutStatus(
+    assignment.checkOutTime,
+    assignment.ngay,
+    assignment.ca
+  );
 
   function formatDate(date) {
     if (!date) return "-";
@@ -115,6 +123,15 @@ export default function CheckOutDetailDialog({
             <Typography>
               {formatDate(assignment.checkOutTime)}
             </Typography>
+
+            {checkOutStatus && (
+              <Chip
+                size="small"
+                sx={{ mt: 0.5 }}
+                label={checkOutStatus.label}
+                color={checkOutStatus.late ? "error" : "success"}
+              />
+            )}
           </Grid>
 
           <Grid size={{ xs: 6 }}>
