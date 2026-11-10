@@ -21,6 +21,7 @@ const {
 } = require("../utils/scopeHelpers");
 const {
   getCheckInStatus,
+  getCheckOutStatus,
   getMissingCheckInAlert,
 } = require("../utils/shiftHelpers");
 
@@ -141,7 +142,11 @@ function summarize(assignments) {
     hoanThanh: 0,
     chuaHoanThanh: 0,
     late: 0,
+    lateCheckIn: 0,
+    lateCheckOut: 0,
     gpsViolation: 0,
+    gpsCheckIn: 0,
+    gpsCheckOut: 0,
     choXacNhan: 0,
     daXacNhan: 0,
     khongXacNhan: 0,
@@ -158,8 +163,19 @@ function summarize(assignments) {
       item.ngay,
       item.ca
     );
+    const checkOutStatus = getCheckOutStatus(
+      item.checkOutTime,
+      item.ngay,
+      item.ca
+    );
 
-    if (checkInStatus?.late) summary.late++;
+    if (checkInStatus?.late) {
+      summary.late++;
+      summary.lateCheckIn++;
+    }
+    if (checkOutStatus?.late) summary.lateCheckOut++;
+    if (item.checkInGpsValid === false) summary.gpsCheckIn++;
+    if (item.checkOutGpsValid === false) summary.gpsCheckOut++;
     if (hasGpsViolation(item)) summary.gpsViolation++;
 
     if (item.warehouseStatus === "Chờ xác nhận") summary.choXacNhan++;
@@ -500,8 +516,14 @@ async function buildReportData({ from, to, kho }) {
         hoTen: driver.hoTen,
         total: 0,
         hoanThanh: 0,
+        checkInCount: 0,
+        checkOutCount: 0,
         late: 0,
+        lateCheckIn: 0,
+        lateCheckOut: 0,
         gpsViolation: 0,
+        gpsCheckIn: 0,
+        gpsCheckOut: 0,
       });
     }
 
@@ -515,8 +537,21 @@ async function buildReportData({ from, to, kho }) {
       item.ngay,
       item.ca
     );
+    const checkOutStatus = getCheckOutStatus(
+      item.checkOutTime,
+      item.ngay,
+      item.ca
+    );
 
-    if (checkInStatus?.late) stat.late++;
+    if (item.checkInTime) stat.checkInCount++;
+    if (item.checkOutTime) stat.checkOutCount++;
+    if (checkInStatus?.late) {
+      stat.late++;
+      stat.lateCheckIn++;
+    }
+    if (checkOutStatus?.late) stat.lateCheckOut++;
+    if (item.checkInGpsValid === false) stat.gpsCheckIn++;
+    if (item.checkOutGpsValid === false) stat.gpsCheckOut++;
     if (hasGpsViolation(item)) stat.gpsViolation++;
   }
 
@@ -524,8 +559,23 @@ async function buildReportData({ from, to, kho }) {
     .map((stat) => ({
       ...stat,
       onTimeRate:
-        stat.total > 0
-          ? Math.round(((stat.total - stat.late) / stat.total) * 100)
+        stat.checkInCount > 0
+          ? Math.round(
+              ((stat.checkInCount - stat.lateCheckIn) / stat.checkInCount) * 100
+            )
+          : 0,
+      onTimeCheckInRate:
+        stat.checkInCount > 0
+          ? Math.round(
+              ((stat.checkInCount - stat.lateCheckIn) / stat.checkInCount) * 100
+            )
+          : 0,
+      onTimeCheckOutRate:
+        stat.checkOutCount > 0
+          ? Math.round(
+              ((stat.checkOutCount - stat.lateCheckOut) / stat.checkOutCount) *
+                100
+            )
           : 0,
     }))
     .sort((a, b) => b.total - a.total);
@@ -651,8 +701,10 @@ exports.exportReportExcel = async (req, res) => {
       { "Chỉ số": "Tổng chuyến", "Giá trị": summary.total },
       { "Chỉ số": "Hoàn thành", "Giá trị": summary.hoanThanh },
       { "Chỉ số": "Chưa hoàn thành", "Giá trị": summary.chuaHoanThanh },
-      { "Chỉ số": "Trễ giờ Check In", "Giá trị": summary.late },
-      { "Chỉ số": "Vi phạm GPS", "Giá trị": summary.gpsViolation },
+      { "Chỉ số": "Trễ giờ Check In", "Giá trị": summary.lateCheckIn },
+      { "Chỉ số": "Trễ giờ Check Out", "Giá trị": summary.lateCheckOut },
+      { "Chỉ số": "Vi phạm GPS Check In", "Giá trị": summary.gpsCheckIn },
+      { "Chỉ số": "Vi phạm GPS Check Out", "Giá trị": summary.gpsCheckOut },
       { "Chỉ số": "Chờ kho xác nhận", "Giá trị": summary.choXacNhan },
       { "Chỉ số": "Kho đã xác nhận", "Giá trị": summary.daXacNhan },
       { "Chỉ số": "Kho không xác nhận", "Giá trị": summary.khongXacNhan },
@@ -663,9 +715,12 @@ exports.exportReportExcel = async (req, res) => {
       "Họ tên": d.hoTen,
       "Tổng chuyến": d.total,
       "Hoàn thành": d.hoanThanh,
-      "Trễ giờ": d.late,
-      "Vi phạm GPS": d.gpsViolation,
-      "Tỷ lệ đúng giờ (%)": d.onTimeRate,
+      "Trễ Check In": d.lateCheckIn,
+      "Trễ Check Out": d.lateCheckOut,
+      "Vi phạm GPS Check In": d.gpsCheckIn,
+      "Vi phạm GPS Check Out": d.gpsCheckOut,
+      "Tỷ lệ đúng giờ Check In (%)": d.onTimeCheckInRate,
+      "Tỷ lệ đúng giờ Check Out (%)": d.onTimeCheckOutRate,
     }));
 
     const warehouseRows = byWarehouse.map((w) => ({

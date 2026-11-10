@@ -26,7 +26,8 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import LoginIcon from "@mui/icons-material/Login";
+import LogoutIcon from "@mui/icons-material/Logout";
 import GpsOffIcon from "@mui/icons-material/GpsOff";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import PersonIcon from "@mui/icons-material/Person";
@@ -73,6 +74,13 @@ function SectionHeading({ icon, children, hint }) {
       </Box>
     </Stack>
   );
+}
+
+function CountChip({ value, color = "error" }) {
+  if (!value) {
+    return <Typography color="text.secondary">0</Typography>;
+  }
+  return <Chip size="small" color={color} label={value} />;
 }
 
 function RateCell({ value, color = brand.teal }) {
@@ -208,18 +216,32 @@ export default function Report() {
           hint: "quá hạn chưa Check Out",
         },
         {
-          title: "Trễ giờ Check In",
-          value: summary.late,
-          icon: <AccessTimeIcon />,
+          title: "Trễ Check In",
+          value: summary.lateCheckIn ?? summary.late,
+          icon: <LoginIcon />,
           color: "#ef6c00",
           hint: "sau 7:30",
         },
         {
-          title: "Vi phạm GPS",
-          value: summary.gpsViolation,
+          title: "Trễ Check Out",
+          value: summary.lateCheckOut ?? 0,
+          icon: <LogoutIcon />,
+          color: "#d84315",
+          hint: "sau giờ tan ca",
+        },
+        {
+          title: "GPS Check In",
+          value: summary.gpsCheckIn ?? 0,
           icon: <GpsOffIcon />,
           color: "#ad1457",
-          hint: "Check In/Out sai tọa độ",
+          hint: "sai tọa độ lúc Check In",
+        },
+        {
+          title: "GPS Check Out",
+          value: summary.gpsCheckOut ?? 0,
+          icon: <GpsOffIcon />,
+          color: "#8e24aa",
+          hint: "sai tọa độ lúc Check Out",
         },
         {
           title: "Chờ kho xác nhận",
@@ -311,7 +333,12 @@ export default function Report() {
             />
             <Chip
               size="small"
-              label={`${summary.late} trễ giờ`}
+              label={`${summary.lateCheckIn ?? summary.late ?? 0} trễ Check In`}
+              sx={{ bgcolor: alpha("#fff", 0.12), color: "#fff", fontWeight: 600 }}
+            />
+            <Chip
+              size="small"
+              label={`${summary.lateCheckOut ?? 0} trễ Check Out`}
               sx={{ bgcolor: alpha("#fff", 0.12), color: "#fff", fontWeight: 600 }}
             />
           </Stack>
@@ -392,7 +419,7 @@ export default function Report() {
 
           <Grid container spacing={2} mb={4}>
             {summaryCards.map((card) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} key={card.title}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={card.title}>
                 <StatCard {...card} />
               </Grid>
             ))}
@@ -400,7 +427,7 @@ export default function Report() {
 
           <SectionHeading
             icon={<PersonIcon fontSize="small" />}
-            hint="Đánh giá hiệu suất theo từng tài xế"
+            hint="Tách riêng Check In và Check Out theo từng tài xế"
           >
             Thống kê theo tài xế
           </SectionHeading>
@@ -441,19 +468,37 @@ export default function Report() {
                       align="center"
                       sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
                     >
-                      Trễ giờ
+                      Trễ Check In
                     </TableCell>
                     <TableCell
                       align="center"
                       sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
                     >
-                      Vi phạm GPS
+                      Trễ Check Out
                     </TableCell>
                     <TableCell
                       align="center"
                       sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
                     >
-                      Tỷ lệ đúng giờ
+                      GPS Check In
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
+                    >
+                      GPS Check Out
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
+                    >
+                      Đúng giờ Check In
+                    </TableCell>
+                    <TableCell
+                      align="center"
+                      sx={{ fontWeight: 700, whiteSpace: "nowrap" }}
+                    >
+                      Đúng giờ Check Out
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -461,7 +506,7 @@ export default function Report() {
                 <TableBody>
                   {data.byDriver.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={10} align="center">
                         <Typography color="text.secondary" sx={{ py: 3 }}>
                           Không có dữ liệu trong khoảng thời gian này.
                         </Typography>
@@ -480,31 +525,45 @@ export default function Report() {
                       <TableCell align="center">{d.total}</TableCell>
                       <TableCell align="center">{d.hoanThanh}</TableCell>
                       <TableCell align="center">
-                        {d.late > 0 ? (
-                          <Chip size="small" color="error" label={d.late} />
-                        ) : (
-                          <Typography color="text.secondary">0</Typography>
-                        )}
+                        <CountChip value={d.lateCheckIn ?? d.late} />
                       </TableCell>
                       <TableCell align="center">
-                        {d.gpsViolation > 0 ? (
-                          <Chip
-                            size="small"
-                            color="warning"
-                            label={d.gpsViolation}
-                          />
-                        ) : (
-                          <Typography color="text.secondary">0</Typography>
-                        )}
+                        <CountChip value={d.lateCheckOut} />
+                      </TableCell>
+                      <TableCell align="center">
+                        <CountChip
+                          value={d.gpsCheckIn}
+                          color="warning"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <CountChip
+                          value={d.gpsCheckOut}
+                          color="warning"
+                        />
                       </TableCell>
                       <TableCell align="center">
                         <Box display="flex" justifyContent="center">
                           <RateCell
-                            value={d.onTimeRate}
+                            value={d.onTimeCheckInRate ?? d.onTimeRate}
                             color={
-                              d.onTimeRate >= 80
+                              (d.onTimeCheckInRate ?? d.onTimeRate) >= 80
                                 ? "#43a047"
-                                : d.onTimeRate >= 50
+                                : (d.onTimeCheckInRate ?? d.onTimeRate) >= 50
+                                  ? "#ef6c00"
+                                  : "#c62828"
+                            }
+                          />
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box display="flex" justifyContent="center">
+                          <RateCell
+                            value={d.onTimeCheckOutRate ?? 0}
+                            color={
+                              (d.onTimeCheckOutRate ?? 0) >= 80
+                                ? "#43a047"
+                                : (d.onTimeCheckOutRate ?? 0) >= 50
                                   ? "#ef6c00"
                                   : "#c62828"
                             }

@@ -116,6 +116,22 @@ function getCheckInStatus(checkInTime, ngay, ca) {
   return { late: true, minutes: diffMinutes };
 }
 
+function getCheckOutStatus(checkOutTime, ngay, ca) {
+  if (!checkOutTime || !ngay) return null;
+
+  const shiftEnd = getShiftEnd(ngay, ca);
+  if (!shiftEnd) return null;
+
+  const actual = new Date(checkOutTime);
+  const diffMinutes = Math.round((actual - shiftEnd) / 60000);
+
+  if (diffMinutes <= 0) {
+    return { late: false, minutes: 0 };
+  }
+
+  return { late: true, minutes: diffMinutes };
+}
+
 function getMissingCheckInAlert(ngay, ca, checkInTime, now = new Date()) {
   if (checkInTime) return null;
 
@@ -150,5 +166,6 @@ module.exports = {
   isAfterCheckInDeadline,
   isAfterCheckOutDeadline,
   getCheckInStatus,
+  getCheckOutStatus,
   getMissingCheckInAlert,
 };
