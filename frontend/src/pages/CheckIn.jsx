@@ -328,6 +328,10 @@ export default function CheckIn() {
         open={openDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenDetail(false)}
+        onUpdated={(next) => {
+          setSelectedAssignment(next);
+          loadAssignments();
+        }}
       />
 
     </Box>

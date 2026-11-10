@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Box,
   Dialog,
@@ -10,16 +11,29 @@ import {
   Divider,
   Chip,
   Alert,
+  TextField,
+  Stack,
 } from "@mui/material";
 
 import { getCheckInStatus } from "../utils/shiftHelpers";
 import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
+import { updateAssignmentOdo } from "../api/assignmentApi";
 
 export default function CheckInDetailDialog({
   open,
   onClose,
   assignment,
+  onUpdated,
 }) {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const canEditOdo = user?.quyen === "SUPER_ADMIN";
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft(assignment?.odoCheckIn ?? "");
+  }, [assignment?.id, assignment?.odoCheckIn, open]);
+
   if (!assignment) return null;
 
   function formatDate(date) {
@@ -33,6 +47,31 @@ export default function CheckInDetailDialog({
     assignment.ngay,
     assignment.ca
   );
+
+  async function handleSaveOdo() {
+    const next = String(draft).trim();
+    if (!next || Number(next) < 0 || !Number.isFinite(Number(next))) {
+      alert("Vui lòng nhập số ODO hợp lệ.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await updateAssignmentOdo(assignment.id, {
+        odoCheckIn: Number(next),
+      });
+      const updated = res.data?.data || { ...assignment, odoCheckIn: Number(next) };
+      onUpdated?.(updated);
+      alert("Đã cập nhật ODO Check In.");
+    } catch (err) {
+      alert(err.response?.data?.message || "Không lưu được số ODO.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const odoChanged =
+    String(draft) !== String(assignment.odoCheckIn ?? "");
 
   return (
     <Dialog
@@ -139,9 +178,30 @@ export default function CheckInDetailDialog({
               <b>ODO</b>
             </Typography>
 
-            <Typography>
-              {assignment.odoCheckIn || "-"}
-            </Typography>
+            {canEditOdo ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  inputProps={{ min: 0, step: 1 }}
+                  sx={{ maxWidth: 180 }}
+                />
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={!odoChanged || saving}
+                  onClick={handleSaveOdo}
+                >
+                  {saving ? "Đang lưu..." : "Lưu"}
+                </Button>
+              </Stack>
+            ) : (
+              <Typography>
+                {assignment.odoCheckIn || "-"}
+              </Typography>
+            )}
           </Grid>
 
           <Grid size={{ xs: 6 }}>
