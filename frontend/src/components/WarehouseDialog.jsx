@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 
 const EMPTY_FORM = {
+  idKho: "",
   ten: "",
   latitude: "",
   longitude: "",
@@ -26,6 +27,7 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
     if (!open) return;
     if (warehouse) {
       setForm({
+        idKho: warehouse.idKho ?? "",
         ten: warehouse.ten ?? "",
         latitude: warehouse.latitude ?? "",
         longitude: warehouse.longitude ?? "",
@@ -41,6 +43,11 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
   }
 
   async function handleSave() {
+    if (!String(form.idKho || "").trim()) {
+      alert("Vui lòng nhập ID kho.");
+      return;
+    }
+
     if (!isEdit && !String(form.ten || "").trim()) {
       alert("Vui lòng nhập tên kho.");
       return;
@@ -52,6 +59,7 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
     }
 
     const payload = {
+      idKho: String(form.idKho).trim(),
       latitude: Number(form.latitude),
       longitude: Number(form.longitude),
       banKinh: Number(form.banKinh),
@@ -88,7 +96,17 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
       </DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
-          <Grid size={{ xs: 12 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="ID kho"
+              name="idKho"
+              value={form.idKho}
+              onChange={handleChange}
+              placeholder="Ví dụ: TB01"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 8 }}>
             <TextField
               fullWidth
               label="Tên kho"

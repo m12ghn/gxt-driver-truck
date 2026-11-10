@@ -76,6 +76,7 @@ export default function Warehouse() {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
+              <TableCell>ID kho</TableCell>
               <TableCell>Tên kho</TableCell>
               <TableCell>Latitude</TableCell>
               <TableCell>Longitude</TableCell>
@@ -86,6 +87,7 @@ export default function Warehouse() {
           <TableBody>
             {warehouses.map((item) => (
               <TableRow key={item.id} hover>
+                <TableCell>{item.idKho || "—"}</TableCell>
                 <TableCell>{item.ten}</TableCell>
                 <TableCell>{item.latitude}</TableCell>
                 <TableCell>{item.longitude}</TableCell>

@@ -7,6 +7,7 @@ const sequelize = require("./database/database");
 const { ensureWarehouses } = require("./utils/ensureWarehouses");
 const { ensureAssignmentColumns } = require("./utils/ensureAssignmentColumns");
 const { ensureUserKhoColumn } = require("./utils/ensureUserKhoColumn");
+const { ensureWarehouseColumns } = require("./utils/ensureWarehouseColumns");
 
 // ==============================
 // Models
@@ -114,6 +115,7 @@ function kickWarmup() {
     .then(() => ensureWarehouses())
     .then(() => ensureAssignmentColumns())
     .then(() => ensureUserKhoColumn())
+    .then(() => ensureWarehouseColumns())
     .catch((err) => {
       warmupStarted = false;
       console.error("⚠️  Warmup failed:", err.message);

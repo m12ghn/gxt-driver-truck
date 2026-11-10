@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const Warehouse = require("../models/Warehouse");
 const { getUserKhoVariants, userKhoValue } = require("../utils/scopeHelpers");
+const { ensureWarehouseColumns } = require("../utils/ensureWarehouseColumns");
 const {
   recalculateAssignmentGpsForWarehouse,
   syncSiblingWarehouseCoords,
@@ -8,6 +9,8 @@ const {
 
 exports.getWarehouses = async (req, res) => {
   try {
+    await ensureWarehouseColumns();
+
     const where = {};
 
     if (req.user?.quyen === "WAREHOUSE") {
@@ -32,11 +35,16 @@ exports.getWarehouses = async (req, res) => {
   }
 };
 
-function parseWarehousePayload(body, { requireName = false } = {}) {
+function parseWarehousePayload(body, { requireName = false, requireIdKho = false } = {}) {
   const ten = String(body.ten || "").trim();
+  const idKho = String(body.idKho || "").trim();
   const latitude = Number(body.latitude);
   const longitude = Number(body.longitude);
   const banKinh = Number(body.banKinh);
+
+  if (requireIdKho && !idKho) {
+    return { error: { status: 400, message: "Vui lòng nhập ID kho." } };
+  }
 
   if (requireName && !ten) {
     return { error: { status: 400, message: "Vui lòng nhập tên kho." } };
@@ -50,7 +58,7 @@ function parseWarehousePayload(body, { requireName = false } = {}) {
     return { error: { status: 400, message: "Bán kính phải từ 20 mét trở lên." } };
   }
 
-  return { ten, latitude, longitude, banKinh };
+  return { ten, idKho: idKho || null, latitude, longitude, banKinh };
 }
 
 exports.createWarehouse = async (req, res) => {
@@ -62,7 +70,12 @@ exports.createWarehouse = async (req, res) => {
       });
     }
 
-    const parsed = parseWarehousePayload(req.body, { requireName: true });
+    await ensureWarehouseColumns();
+
+    const parsed = parseWarehousePayload(req.body, {
+      requireName: true,
+      requireIdKho: true,
+    });
     if (parsed.error) {
       return res.status(parsed.error.status).json({
         success: false,
@@ -70,15 +83,24 @@ exports.createWarehouse = async (req, res) => {
       });
     }
 
-    const existed = await Warehouse.findOne({ where: { ten: parsed.ten } });
-    if (existed) {
+    const existedName = await Warehouse.findOne({ where: { ten: parsed.ten } });
+    if (existedName) {
       return res.status(400).json({
         success: false,
         message: "Tên kho này đã tồn tại.",
       });
     }
 
+    const existedId = await Warehouse.findOne({ where: { idKho: parsed.idKho } });
+    if (existedId) {
+      return res.status(400).json({
+        success: false,
+        message: "ID kho này đã tồn tại.",
+      });
+    }
+
     const warehouse = await Warehouse.create({
+      idKho: parsed.idKho,
       ten: parsed.ten,
       latitude: parsed.latitude,
       longitude: parsed.longitude,
@@ -92,9 +114,12 @@ exports.createWarehouse = async (req, res) => {
     });
   } catch (err) {
     if (err.name === "SequelizeUniqueConstraintError") {
+      const fields = Object.keys(err.fields || {});
       return res.status(400).json({
         success: false,
-        message: "Tên kho này đã tồn tại.",
+        message: fields.includes("idKho")
+          ? "ID kho này đã tồn tại."
+          : "Tên kho này đã tồn tại.",
       });
     }
 
@@ -114,6 +139,8 @@ exports.updateWarehouse = async (req, res) => {
       });
     }
 
+    await ensureWarehouseColumns();
+
     const warehouse = await Warehouse.findByPk(req.params.id);
 
     if (!warehouse) {
@@ -131,7 +158,20 @@ exports.updateWarehouse = async (req, res) => {
       });
     }
 
+    if (parsed.idKho) {
+      const existedId = await Warehouse.findOne({
+        where: { idKho: parsed.idKho, id: { [Op.ne]: warehouse.id } },
+      });
+      if (existedId) {
+        return res.status(400).json({
+          success: false,
+          message: "ID kho này đã tồn tại.",
+        });
+      }
+    }
+
     const coords = {
+      idKho: parsed.idKho,
       latitude: parsed.latitude,
       longitude: parsed.longitude,
       banKinh: parsed.banKinh,

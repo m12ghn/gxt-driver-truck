@@ -2,6 +2,12 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../database/database");
 
 const Warehouse = sequelize.define("Warehouse", {
+  idKho: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
+  },
+
   ten: {
     type: DataTypes.STRING,
     allowNull: false,
