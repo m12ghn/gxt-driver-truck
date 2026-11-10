@@ -1,6 +1,5 @@
 const { Op } = require("sequelize");
 const Warehouse = require("../models/Warehouse");
-const { ensureWarehouses } = require("../utils/ensureWarehouses");
 const { getUserKhoVariants, userKhoValue } = require("../utils/scopeHelpers");
 const {
   recalculateAssignmentGpsForWarehouse,
@@ -9,8 +8,6 @@ const {
 
 exports.getWarehouses = async (req, res) => {
   try {
-    await ensureWarehouses();
-
     const where = {};
 
     if (req.user?.quyen === "WAREHOUSE") {

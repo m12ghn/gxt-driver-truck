@@ -32,7 +32,9 @@ export default function Warehouse() {
       setWarehouses(res.data.data || []);
     } catch (err) {
       console.error(err);
-      alert("Không tải được danh sách kho.");
+      alert(
+        err.response?.data?.message || "Không tải được danh sách kho."
+      );
     } finally {
       setLoading(false);
     }

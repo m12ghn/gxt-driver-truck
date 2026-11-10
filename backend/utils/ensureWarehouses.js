@@ -90,11 +90,15 @@ async function ensureWarehouses() {
     console.warn("applyShortNameRewrites:", err.message);
   }
 
-  for (const item of DEFAULT_WAREHOUSES) {
-    await Warehouse.findOrCreate({
-      where: { ten: item.ten },
-      defaults: item,
-    });
+  try {
+    for (const item of DEFAULT_WAREHOUSES) {
+      await Warehouse.findOrCreate({
+        where: { ten: item.ten },
+        defaults: item,
+      });
+    }
+  } catch (err) {
+    console.warn("ensureWarehouses seed:", err.message);
   }
 
   ensured = true;
