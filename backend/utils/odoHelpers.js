@@ -9,6 +9,7 @@ function isConfirmed(value) {
 }
 
 function parseOdo(value) {
+  if (value == null || String(value).trim() === "") return null;
   const km = Number(value);
   if (!Number.isFinite(km) || km < 0) return null;
   return Math.round(km);
@@ -121,6 +122,7 @@ module.exports = {
   MAX_DAILY_KM,
   isConfirmed,
   parseOdo,
+  findPreviousOdo,
   validateCheckInOdo,
   validateCheckOutOdo,
 };

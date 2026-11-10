@@ -27,6 +27,7 @@ const {
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
   parseOdo,
+  findPreviousOdo,
   validateCheckInOdo,
   validateCheckOutOdo,
 } = require("../utils/odoHelpers");
@@ -1040,6 +1041,17 @@ exports.updateAssignmentOdo = async (req, res) => {
         });
       }
       patch.odoCheckIn = value;
+
+      const lastOdo = await findPreviousOdo(
+        assignment.vehicleId,
+        assignmentDateText(assignment.ngay)
+      );
+      if (lastOdo != null && value <= lastOdo) {
+        return res.status(400).json({
+          success: false,
+          message: `ODO Check In phải lớn hơn ODO Check Out ngày hôm trước (${lastOdo}).`,
+        });
+      }
     }
 
     if (hasCheckOut) {
@@ -1061,8 +1073,11 @@ exports.updateAssignmentOdo = async (req, res) => {
 
     const nextCheckIn =
       patch.odoCheckIn ?? parseOdo(assignment.odoCheckIn);
-    const nextCheckOut =
-      patch.odoCheckOut ?? parseOdo(assignment.odoCheckOut);
+    const nextCheckOut = hasCheckOut
+      ? patch.odoCheckOut
+      : assignment.checkOutTime
+        ? parseOdo(assignment.odoCheckOut)
+        : null;
 
     const odoConflict =
       nextCheckIn != null &&
