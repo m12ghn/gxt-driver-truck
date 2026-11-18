@@ -204,6 +204,21 @@ const Assignment = sequelize.define("Assignment", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+
+  soNvpTtt: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  soDonGanGiao: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  soDonGanLay: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 // ==========================

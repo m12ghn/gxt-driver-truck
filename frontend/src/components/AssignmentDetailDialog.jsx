@@ -31,6 +31,7 @@ import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
 import { getWarehouses } from "../api/warehouseApi";
 import { updateAssignmentOdo } from "../api/assignmentApi";
 import WarehouseGpsMap from "./WarehouseGpsMap";
+import { isVungHcm } from "../constants/projects";
 
 function formatDateTime(date) {
   if (!date) return "-";
@@ -456,26 +457,36 @@ export default function AssignmentDetailDialog({
           </Grid>
 
           {assignment.warehouseStatus && (
-            <Stack direction="row" spacing={1} alignItems="center" mt={2}>
-              <Typography variant="body2" color="text.secondary">
-                Kho xác nhận:
-              </Typography>
-              <Chip
-                size="small"
-                label={assignment.warehouseStatus}
-                color={warehouseColorMap[assignment.warehouseStatus] || "default"}
-              />
-              {assignment.warehouseStatus === "Không xác nhận" &&
-                assignment.warehouseReason && (
-                  <Typography variant="body2" color="error">
-                    — {assignment.warehouseReason}
+            <Stack spacing={0.75} mt={2}>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Typography variant="body2" color="text.secondary">
+                  {isVungHcm(assignment.duAn) ? "AM xác nhận:" : "Kho xác nhận:"}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={assignment.warehouseStatus}
+                  color={warehouseColorMap[assignment.warehouseStatus] || "default"}
+                />
+                {assignment.warehouseStatus === "Không xác nhận" &&
+                  assignment.warehouseReason && (
+                    <Typography variant="body2" color="error">
+                      — {assignment.warehouseReason}
+                    </Typography>
+                  )}
+                {assignment.maChuyenDi && (
+                  <Typography variant="body2" color="text.secondary">
+                    — Mã chuyến: {assignment.maChuyenDi}
                   </Typography>
                 )}
-              {assignment.maChuyenDi && (
-                <Typography variant="body2" color="text.secondary">
-                  — Mã chuyến: {assignment.maChuyenDi}
-                </Typography>
-              )}
+              </Stack>
+              {isVungHcm(assignment.duAn) &&
+                assignment.warehouseStatus === "Đã xác nhận" && (
+                  <Typography variant="body2" color="text.secondary">
+                    NVPTTT: {assignment.soNvpTtt ?? "-"} · Đơn gán giao:{" "}
+                    {assignment.soDonGanGiao ?? "-"} · Đơn gán lấy:{" "}
+                    {assignment.soDonGanLay ?? "-"}
+                  </Typography>
+                )}
             </Stack>
           )}
         </Paper>

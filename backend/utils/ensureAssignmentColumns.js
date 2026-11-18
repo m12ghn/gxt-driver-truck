@@ -17,6 +17,30 @@ async function ensureAssignmentColumns() {
     console.log("✅ Added column Assignments.maChuyenDi");
   }
 
+  if (!table.soNvpTtt) {
+    await qi.addColumn("Assignments", "soNvpTtt", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+    console.log("✅ Added column Assignments.soNvpTtt");
+  }
+
+  if (!table.soDonGanGiao) {
+    await qi.addColumn("Assignments", "soDonGanGiao", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+    console.log("✅ Added column Assignments.soDonGanGiao");
+  }
+
+  if (!table.soDonGanLay) {
+    await qi.addColumn("Assignments", "soDonGanLay", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+    console.log("✅ Added column Assignments.soDonGanLay");
+  }
+
   if (!table.duAn) {
     await qi.addColumn("Assignments", "duAn", {
       type: DataTypes.STRING,

@@ -9,6 +9,7 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
+import { isVungHcm } from "../constants/projects";
 
 export default function WarehouseDetailDialog({
   open,
@@ -19,6 +20,8 @@ export default function WarehouseDetailDialog({
   onReject,
 }) {
   if (!assignment) return null;
+
+  const hcm = isVungHcm(assignment.duAn);
 
   function formatDate(date) {
     if (!date) return "-";
@@ -34,7 +37,7 @@ export default function WarehouseDetailDialog({
       maxWidth="sm"
     >
       <DialogTitle>
-        Chi tiết xác nhận kho
+        {hcm ? "Chi tiết xác nhận AM" : "Chi tiết xác nhận kho"}
       </DialogTitle>
 
       <DialogContent>
@@ -79,7 +82,7 @@ export default function WarehouseDetailDialog({
 
           <Grid size={{ xs: 12 }}>
             <Typography sx={{ mb: 1 }}>
-              <b>Trạng thái kho:</b>
+              <b>{hcm ? "Trạng thái AM:" : "Trạng thái kho:"}</b>
             </Typography>
 
             {assignment.warehouseStatus === "Đã xác nhận" && (
@@ -138,7 +141,7 @@ export default function WarehouseDetailDialog({
 
             <Grid size={{ xs: 12 }}>
               <Typography>
-                <b>Mã chuyến đi</b>
+                <b>{hcm ? "Mã chuyến" : "Mã chuyến đi"}</b>
               </Typography>
 
               <Typography>
@@ -146,6 +149,35 @@ export default function WarehouseDetailDialog({
               </Typography>
             </Grid>
 
+          )}
+
+          {hcm && assignment.warehouseStatus === "Đã xác nhận" && (
+            <>
+              <Grid size={{ xs: 12 }}>
+                <Typography>
+                  <b>Số NVPTTT đi theo xe</b>
+                </Typography>
+                <Typography>
+                  {assignment.soNvpTtt ?? "-"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Typography>
+                  <b>Số đơn gán giao</b>
+                </Typography>
+                <Typography>
+                  {assignment.soDonGanGiao ?? "-"}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Typography>
+                  <b>Số đơn gán lấy</b>
+                </Typography>
+                <Typography>
+                  {assignment.soDonGanLay ?? "-"}
+                </Typography>
+              </Grid>
+            </>
           )}
 
         </Grid>

@@ -37,6 +37,7 @@ const {
   attachLocationToAssignment,
 } = require("../utils/ensureWarehouses");
 const { parseDuAn, isVungHcm, duAnWhere } = require("../constants/projects");
+const { ensureAssignmentColumns } = require("../utils/ensureAssignmentColumns");
 const {
   withReadablePhotos,
 } = require("../utils/uploadToSupabase");
@@ -309,7 +310,16 @@ exports.exportExcel = async (req, res) => {
       "Check Out - Thời gian": formatVietnamDateTime(item.checkOutTime),
       "Check Out - ODO": item.odoCheckOut ?? "",
       "User xác nhận": item.warehouseConfirmBy || "",
-      "Mã chuyến đi": item.maChuyenDi || "",
+      ...(isVungHcm(req.query.duAn)
+        ? {
+            "Mã chuyến": item.maChuyenDi || "",
+            "Số NVPTTT đi theo xe": item.soNvpTtt ?? "",
+            "Số đơn gán giao": item.soDonGanGiao ?? "",
+            "Số đơn gán lấy": item.soDonGanLay ?? "",
+          }
+        : {
+            "Mã chuyến đi": item.maChuyenDi || "",
+          }),
       };
     });
 
@@ -764,8 +774,21 @@ exports.adminCheckOut = async (req, res) => {
 // KHO XÁC NHẬN
 // Chỉ được xác nhận sau khi đã Check Out
 // ==============================
+function parseCountField(value, label) {
+  const raw = String(value ?? "").trim();
+  if (raw === "") {
+    return { error: `Vui lòng nhập ${label}.` };
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    return { error: `${label} phải là số nguyên từ 0 trở lên.` };
+  }
+  return { value: n };
+}
+
 exports.confirmWarehouse = async (req, res) => {
   try {
+    await ensureAssignmentColumns();
 
     const assignment = await Assignment.findByPk(
       req.params.id
@@ -780,10 +803,14 @@ exports.confirmWarehouse = async (req, res) => {
 
     if (denyIfOutOfScope(req, res, assignment)) return;
 
+    const hcm = isVungHcm(assignment.duAn);
+
     if (!assignment.checkOutTime) {
       return res.status(400).json({
         success: false,
-        message: "Chuyến này chưa Check Out, kho chưa thể xác nhận.",
+        message: hcm
+          ? "Chuyến này chưa Check Out, AM chưa thể xác nhận."
+          : "Chuyến này chưa Check Out, kho chưa thể xác nhận.",
       });
     }
 
@@ -792,6 +819,9 @@ exports.confirmWarehouse = async (req, res) => {
       warehouseConfirmBy,
       warehouseReason,
       maChuyenDi,
+      soNvpTtt,
+      soDonGanGiao,
+      soDonGanLay,
     } = req.body;
 
     if (!warehouseConfirmBy) {
@@ -808,21 +838,44 @@ exports.confirmWarehouse = async (req, res) => {
       if (!tripCode) {
         return res.status(400).json({
           success: false,
-          message: "Vui lòng nhập mã chuyến đi trước khi xác nhận.",
+          message: hcm
+            ? "Vui lòng nhập mã chuyến trước khi xác nhận."
+            : "Vui lòng nhập mã chuyến đi trước khi xác nhận.",
         });
       }
 
-      await assignment.update({
+      const payload = {
         warehouseStatus: "Đã xác nhận",
         warehouseReason: null,
         warehouseConfirmBy,
         warehouseConfirmTime: new Date(),
         maChuyenDi: tripCode,
-      });
+      };
+
+      if (hcm) {
+        const nvp = parseCountField(soNvpTtt, "số NVPTTT đi theo xe");
+        if (nvp.error) {
+          return res.status(400).json({ success: false, message: nvp.error });
+        }
+        const giao = parseCountField(soDonGanGiao, "số đơn gán giao");
+        if (giao.error) {
+          return res.status(400).json({ success: false, message: giao.error });
+        }
+        const lay = parseCountField(soDonGanLay, "số đơn gán lấy");
+        if (lay.error) {
+          return res.status(400).json({ success: false, message: lay.error });
+        }
+
+        payload.soNvpTtt = nvp.value;
+        payload.soDonGanGiao = giao.value;
+        payload.soDonGanLay = lay.value;
+      }
+
+      await assignment.update(payload);
 
       return res.json({
         success: true,
-        message: "Kho xác nhận thành công.",
+        message: hcm ? "AM xác nhận thành công." : "Kho xác nhận thành công.",
         data: assignment,
       });
 

@@ -62,7 +62,7 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
 
   const hcm = isVungHcm(duAn);
   const locationLabel = hcm ? "Bưu cục" : "Kho";
-  const confirmLabel = hcm ? "Bưu cục xác nhận" : "Kho xác nhận";
+  const confirmLabel = hcm ? "AM xác nhận" : "Kho xác nhận";
 
   const userKhoList = parseKhoList(user?.khoList || user?.kho);
 
@@ -933,7 +933,7 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
               setOpenWarehouseDetail(true);
             }}
           >
-            Kho
+            {hcm ? "AM" : "Kho"}
           </Button>
 
           <Button
