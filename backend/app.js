@@ -31,6 +31,7 @@ const assignmentRoutes = require("./routes/assignmentRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const statsRoutes = require("./routes/statsRoutes");
 const warehouseRoutes = require("./routes/warehouseRoutes");
+const assistantRoutes = require("./routes/assistantRoutes");
 
 const app = express();
 
@@ -159,6 +160,7 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/warehouses", warehouseRoutes);
+app.use("/api/assistant", assistantRoutes);
 
 // ==============================
 // HOME

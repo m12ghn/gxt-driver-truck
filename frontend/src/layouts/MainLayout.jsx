@@ -34,6 +34,7 @@ import PeopleIcon from "@mui/icons-material/People";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import MapIcon from "@mui/icons-material/Map";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 
@@ -157,6 +158,12 @@ export default function MainLayout() {
       text: "Bản đồ GPS",
       icon: <MapIcon />,
       path: "/gps-map",
+      roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
+    },
+    {
+      text: "Trợ lý vận tải",
+      icon: <SmartToyIcon />,
+      path: "/assistant",
       roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
     },
     {

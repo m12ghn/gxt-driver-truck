@@ -14,6 +14,7 @@ import Assignment from "./pages/Assignment";
 import GpsMap from "./pages/GpsMap";
 import Warehouse from "./pages/Warehouse";
 import User from "./pages/User";
+import Assistant from "./pages/Assistant";
 import Forbidden from "./pages/Forbidden";
 import { DU_AN_GXT, DU_AN_VUNG_HCM } from "./constants/projects";
 
@@ -199,6 +200,21 @@ export default function App() {
               ]}
             >
               <GpsMap />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/assistant"
+          element={
+            <PrivateRoute
+              roles={[
+                "SUPER_ADMIN",
+                "ADMIN",
+                "WAREHOUSE",
+              ]}
+            >
+              <Assistant />
             </PrivateRoute>
           }
         />
