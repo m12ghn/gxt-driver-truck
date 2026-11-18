@@ -207,6 +207,7 @@ exports.getTodayAssignments = async (req, res) => {
 // ==============================
 exports.getAssignments = async (req, res) => {
   try {
+    await ensureAssignmentColumns();
 
     const today = vietnamToday();
 

@@ -137,6 +137,7 @@ app.use(async (req, res, next) => {
 
   try {
     await ensureConnected();
+    await ensureAssignmentColumns();
     scheduleWarmup(res);
     next();
   } catch (err) {
