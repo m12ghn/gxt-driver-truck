@@ -16,6 +16,7 @@ import {
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import DirectionsIcon from "@mui/icons-material/Directions";
 
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
@@ -435,13 +436,30 @@ export default function CheckInOutWizard({ mode }) {
           <Typography>{gpsAlert?.message}</Typography>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ flexDirection: "column", gap: 1, p: 2 }}>
+          {Number.isFinite(Number(assignment?.location?.latitude)) &&
+            Number.isFinite(Number(assignment?.location?.longitude)) && (
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<DirectionsIcon />}
+                href={`https://www.google.com/maps/dir/?api=1&destination=${assignment.location.latitude},${assignment.location.longitude}&travelmode=driving`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {assignment.location?.isBuuCuc || assignment.duAn === "VUNG_HCM"
+                  ? "Chỉ đường đến bưu cục"
+                  : "Chỉ đường đến kho"}
+              </Button>
+            )}
           <Button
             fullWidth
             variant="contained"
             onClick={() => setGpsAlert(null)}
           >
-            Di chuyển về khu vực kho
+            {assignment?.location?.isBuuCuc || assignment?.duAn === "VUNG_HCM"
+              ? "Di chuyển về khu vực bưu cục"
+              : "Di chuyển về khu vực kho"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -32,7 +32,10 @@ const {
   validateCheckOutOdo,
 } = require("../utils/odoHelpers");
 const { getShiftPayroll } = require("../utils/shiftHelpers");
-const { normalizeKhoName } = require("../utils/ensureWarehouses");
+const {
+  normalizeKhoName,
+  attachLocationToAssignment,
+} = require("../utils/ensureWarehouses");
 const { parseDuAn, isVungHcm, duAnWhere } = require("../constants/projects");
 const {
   withReadablePhotos,
@@ -142,9 +145,12 @@ exports.getTodayAssignment = async (req, res) => {
       });
     }
 
+    const data = await withReadablePhotos(assignment);
+    await attachLocationToAssignment(data, assignment);
+
     res.json({
       success: true,
-      data: await withReadablePhotos(assignment),
+      data,
     });
 
   } catch (err) {

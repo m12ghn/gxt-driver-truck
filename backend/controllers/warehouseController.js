@@ -68,7 +68,19 @@ function parseWarehousePayload(body, { requireName = false, requireIdKho = false
     return { error: { status: 400, message: "Bán kính phải từ 20 mét trở lên." } };
   }
 
-  return { ten, idKho: idKho || null, loai, latitude, longitude, banKinh };
+  const amTen = String(body.amTen || "").trim();
+  const amSoDienThoai = String(body.amSoDienThoai || "").replace(/\s/g, "");
+
+  return {
+    ten,
+    idKho: idKho || null,
+    loai,
+    latitude,
+    longitude,
+    banKinh,
+    amTen: loai === "BUU_CUC" ? amTen || null : null,
+    amSoDienThoai: loai === "BUU_CUC" ? amSoDienThoai || null : null,
+  };
 }
 
 exports.createWarehouse = async (req, res) => {
@@ -116,6 +128,8 @@ exports.createWarehouse = async (req, res) => {
       latitude: parsed.latitude,
       longitude: parsed.longitude,
       banKinh: parsed.banKinh,
+      amTen: parsed.amTen,
+      amSoDienThoai: parsed.amSoDienThoai,
     });
 
     res.json({
@@ -195,6 +209,8 @@ exports.updateWarehouse = async (req, res) => {
     await warehouse.update({
       idKho: parsed.idKho,
       loai: parsed.loai,
+      amTen: parsed.amTen,
+      amSoDienThoai: parsed.amSoDienThoai,
       ...coords,
     });
 

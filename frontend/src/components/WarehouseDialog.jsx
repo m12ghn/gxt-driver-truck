@@ -25,6 +25,8 @@ const EMPTY_FORM = {
   latitude: "",
   longitude: "",
   banKinh: 100,
+  amTen: "",
+  amSoDienThoai: "",
 };
 
 export default function WarehouseDialog({ open, onClose, warehouse }) {
@@ -43,6 +45,8 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
         latitude: warehouse.latitude ?? "",
         longitude: warehouse.longitude ?? "",
         banKinh: warehouse.banKinh ?? 100,
+        amTen: warehouse.amTen ?? "",
+        amSoDienThoai: warehouse.amSoDienThoai ?? "",
       });
       return;
     }
@@ -69,12 +73,17 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
       return;
     }
 
+    const isBuuCuc = form.loai === "BUU_CUC";
     const payload = {
       idKho: String(form.idKho).trim(),
-      loai: form.loai === "BUU_CUC" ? "BUU_CUC" : "KHO",
+      loai: isBuuCuc ? "BUU_CUC" : "KHO",
       latitude: Number(form.latitude),
       longitude: Number(form.longitude),
       banKinh: Number(form.banKinh),
+      amTen: isBuuCuc ? String(form.amTen || "").trim() : "",
+      amSoDienThoai: isBuuCuc
+        ? String(form.amSoDienThoai || "").replace(/\s/g, "")
+        : "",
     };
 
     try {
@@ -167,6 +176,29 @@ export default function WarehouseDialog({ open, onClose, warehouse }) {
               onChange={handleChange}
             />
           </Grid>
+          {form.loai === "BUU_CUC" && (
+            <>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="Tên AM"
+                  name="amTen"
+                  value={form.amTen}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <TextField
+                  fullWidth
+                  label="SĐT AM"
+                  name="amSoDienThoai"
+                  value={form.amSoDienThoai}
+                  onChange={handleChange}
+                  placeholder="Ví dụ: 0901234567"
+                />
+              </Grid>
+            </>
+          )}
         </Grid>
       </DialogContent>
       <DialogActions>

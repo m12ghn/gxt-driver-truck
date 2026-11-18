@@ -36,6 +36,22 @@ async function ensureWarehouseColumns() {
     console.log("✅ Added column Warehouses.loai");
   }
 
+  if (!table.amTen) {
+    await qi.addColumn("Warehouses", "amTen", {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+    console.log("✅ Added column Warehouses.amTen");
+  }
+
+  if (!table.amSoDienThoai) {
+    await qi.addColumn("Warehouses", "amSoDienThoai", {
+      type: DataTypes.STRING,
+      allowNull: true,
+    });
+    console.log("✅ Added column Warehouses.amSoDienThoai");
+  }
+
   await sequelize.query(`
     UPDATE "Warehouses"
     SET "loai" = 'BUU_CUC'

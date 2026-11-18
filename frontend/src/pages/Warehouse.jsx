@@ -100,6 +100,7 @@ export default function Warehouse() {
               <TableCell>Latitude</TableCell>
               <TableCell>Longitude</TableCell>
               <TableCell>Bán kính (m)</TableCell>
+              <TableCell>AM</TableCell>
               <TableCell align="right">Thao tác</TableCell>
             </TableRow>
           </TableHead>
@@ -121,6 +122,11 @@ export default function Warehouse() {
                 <TableCell>{item.latitude}</TableCell>
                 <TableCell>{item.longitude}</TableCell>
                 <TableCell>{item.banKinh}</TableCell>
+                <TableCell>
+                  {item.loai === "BUU_CUC"
+                    ? [item.amTen, item.amSoDienThoai].filter(Boolean).join(" · ") || "—"
+                    : "—"}
+                </TableCell>
                 <TableCell align="right">
                   <Button
                     size="small"

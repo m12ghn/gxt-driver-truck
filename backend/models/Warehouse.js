@@ -20,6 +20,16 @@ const Warehouse = sequelize.define("Warehouse", {
     defaultValue: "KHO",
   },
 
+  amTen: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+
+  amSoDienThoai: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+
   latitude: {
     type: DataTypes.FLOAT,
     allowNull: false,

@@ -1,6 +1,7 @@
 const Warehouse = require("../models/Warehouse");
 const sequelize = require("../database/database");
 const { DEFAULT_WAREHOUSES } = require("../constants/warehouses");
+const { ensureWarehouseColumns } = require("./ensureWarehouseColumns");
 
 const KHO_RENAMES = {
   "Kho Trung Chuyển Hồ Chí Minh 01": "Kho Giao Hàng Nặng - Hồ Chí Minh",
@@ -138,6 +139,35 @@ async function findWarehouseByName(ten) {
   );
 }
 
+function locationPayload(warehouse) {
+  if (!warehouse) return null;
+  const loai = warehouse.loai === "BUU_CUC" ? "BUU_CUC" : "KHO";
+  return {
+    ten: warehouse.ten,
+    loai,
+    latitude: warehouse.latitude,
+    longitude: warehouse.longitude,
+    amTen: warehouse.amTen || null,
+    amSoDienThoai: warehouse.amSoDienThoai || null,
+    isBuuCuc: loai === "BUU_CUC",
+  };
+}
+
+async function attachLocationToAssignment(assignmentJson, assignmentRow) {
+  const json = assignmentJson || {};
+  try {
+    await ensureWarehouseColumns();
+    const warehouse = await resolveWarehouseForAssignment(
+      assignmentRow || assignmentJson
+    );
+    json.location = locationPayload(warehouse);
+  } catch (err) {
+    console.warn("attachLocationToAssignment:", err.message);
+    json.location = null;
+  }
+  return json;
+}
+
 async function resolveWarehouseForAssignment(assignment) {
   const official = normalizeKhoName(assignment?.kho);
   if (assignment && official && official !== assignment.kho) {
@@ -178,6 +208,7 @@ module.exports = {
   ensureWarehouses,
   findWarehouseByName,
   resolveWarehouseForAssignment,
+  attachLocationToAssignment,
   SHORT_TO_OFFICIAL,
   normalizeKhoName,
   getKhoNameVariants,

@@ -13,6 +13,8 @@ import {
 
 import LogoutIcon from "@mui/icons-material/Logout";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import PhoneIcon from "@mui/icons-material/Phone";
+import DirectionsIcon from "@mui/icons-material/Directions";
 
 import { getTodayAssignment } from "../api/assignmentApi";
 import BottomNav from "../components/BottomNav";
@@ -82,6 +84,10 @@ export default function Home() {
   function formatDateTime(date) {
     if (!date) return "-";
     return new Date(date).toLocaleString("vi-VN");
+  }
+
+  function mapsDirectionsUrl(lat, lng) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
   }
 
   function renderTrangThaiChip(trangThai) {
@@ -201,12 +207,67 @@ export default function Home() {
           </Typography>
 
           <Typography>
-            <b>Kho:</b> {assignment.kho}
+            <b>
+              {assignment.location?.isBuuCuc || assignment.duAn === "VUNG_HCM"
+                ? "Bưu cục:"
+                : "Kho:"}
+            </b>{" "}
+            {assignment.kho}
           </Typography>
 
           <Typography>
             <b>Biển số xe:</b> {assignment.Vehicle?.bienSo}
           </Typography>
+
+          {(assignment.duAn === "VUNG_HCM" || assignment.location?.isBuuCuc) &&
+            (assignment.location?.amTen || assignment.location?.amSoDienThoai) && (
+              <Box
+                sx={{
+                  mt: 1.5,
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "#eefaf8",
+                }}
+              >
+                <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>
+                  AM bưu cục
+                </Typography>
+                {assignment.location?.amTen && (
+                  <Typography variant="body2">
+                    {assignment.location.amTen}
+                  </Typography>
+                )}
+                {assignment.location?.amSoDienThoai && (
+                  <Button
+                    href={`tel:${assignment.location.amSoDienThoai}`}
+                    startIcon={<PhoneIcon />}
+                    sx={{ mt: 0.5, px: 0, minWidth: 0 }}
+                  >
+                    {assignment.location.amSoDienThoai}
+                  </Button>
+                )}
+              </Box>
+            )}
+
+          {Number.isFinite(Number(assignment.location?.latitude)) &&
+            Number.isFinite(Number(assignment.location?.longitude)) && (
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<DirectionsIcon />}
+                href={mapsDirectionsUrl(
+                  assignment.location.latitude,
+                  assignment.location.longitude
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ mt: 2 }}
+              >
+                {assignment.location?.isBuuCuc || assignment.duAn === "VUNG_HCM"
+                  ? "Chỉ đường đến bưu cục"
+                  : "Chỉ đường đến kho"}
+              </Button>
+            )}
 
           <Divider sx={{ my: 2 }} />
 
