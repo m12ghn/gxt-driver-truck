@@ -152,6 +152,16 @@ function vietnamToday() {
   });
 }
 
+function addDaysIso(iso, days) {
+  const [year, month, day] = String(iso)
+    .slice(0, 10)
+    .split("-")
+    .map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function formatVnDate(iso) {
   const text = String(iso || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return "";
@@ -181,11 +191,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const todayStr = vietnamToday();
+  const last7From = addDaysIso(todayStr, -6);
   const isWarehouse = user?.quyen === "WAREHOUSE";
   const isScoped = isLocationScoped(user);
   const managedKhoList = parseKhoList(user?.khoList || user?.kho);
 
-  const [fromDate, setFromDate] = useState(todayStr);
+  const [fromDate, setFromDate] = useState(last7From);
   const [toDate, setToDate] = useState(todayStr);
   const [selectedKho, setSelectedKho] = useState([]);
   const [khoOptions, setKhoOptions] = useState(
@@ -498,7 +509,7 @@ export default function Dashboard() {
             label="Từ ngày"
             InputLabelProps={{ shrink: true }}
             value={fromDate}
-            onChange={(e) => setFromDate(e.target.value || todayStr)}
+            onChange={(e) => setFromDate(e.target.value || last7From)}
             sx={{ bgcolor: "#fff", borderRadius: 1, minWidth: 170 }}
           />
           <TextField
