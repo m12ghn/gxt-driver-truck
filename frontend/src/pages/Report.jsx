@@ -32,6 +32,10 @@ import GpsOffIcon from "@mui/icons-material/GpsOff";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import PersonIcon from "@mui/icons-material/Person";
 import WarehouseIcon from "@mui/icons-material/Warehouse";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import GroupsIcon from "@mui/icons-material/Groups";
+import Inventory2Icon from "@mui/icons-material/Inventory2";
+import PinIcon from "@mui/icons-material/Pin";
 
 import StatCard from "../components/StatCard";
 import { getReportStats, exportReportExcel } from "../api/statsApi";
@@ -43,7 +47,9 @@ import {
   shortKhoName,
 } from "../constants/warehouses";
 import { brand } from "../theme/brand";
-import { isLocationScoped } from "../utils/userScope";
+import { assignmentDuAnForUser, isLocationScoped } from "../utils/userScope";
+import { isVungHcm } from "../constants/projects";
+import DuAnSelect from "../components/DuAnSelect";
 
 function SectionHeading({ icon, children, hint }) {
   return (
@@ -120,6 +126,8 @@ export default function Report() {
 
   const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(today);
+  const [duAn, setDuAn] = useState(() => assignmentDuAnForUser(user));
+  const hcm = isVungHcm(duAn);
   const [kho, setKho] = useState("");
   const [khoOptions, setKhoOptions] = useState(
     isWarehouse && userKhoList.length ? userKhoList : fallbackWarehouses
@@ -131,17 +139,19 @@ export default function Report() {
 
   useEffect(() => {
     loadWarehouses();
-  }, []);
+  }, [duAn]);
 
   useEffect(() => {
     loadReport();
-  }, [fromDate, toDate, kho]);
+  }, [fromDate, toDate, kho, duAn]);
 
   async function loadWarehouses() {
     try {
-      const res = await getWarehouses();
+      const res = await getWarehouses(hcm ? "BUU_CUC" : "KHO");
       const list = officialWarehouseNames(res.data?.data || []);
       if (list.length > 0) setKhoOptions(list);
+      else setKhoOptions(isWarehouse && userKhoList.length ? userKhoList : []);
+      setKho("");
     } catch (err) {
       console.error(err);
     }
@@ -151,7 +161,12 @@ export default function Report() {
     setLoading(true);
 
     try {
-      const res = await getReportStats(fromDate, toDate, kho || undefined);
+      const res = await getReportStats(
+        fromDate,
+        toDate,
+        kho || undefined,
+        duAn
+      );
       setData(res.data.data);
     } catch (err) {
       console.error(err);
@@ -164,7 +179,12 @@ export default function Report() {
     setExporting(true);
 
     try {
-      const res = await exportReportExcel(fromDate, toDate, kho || undefined);
+      const res = await exportReportExcel(
+        fromDate,
+        toDate,
+        kho || undefined,
+        duAn
+      );
 
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
@@ -186,6 +206,7 @@ export default function Report() {
   }
 
   const summary = data?.summary;
+  const hcmOverview = data?.hcmOverview;
 
   const completeRate =
     summary && summary.total > 0
@@ -244,11 +265,11 @@ export default function Report() {
           hint: "sai tọa độ lúc Check Out",
         },
         {
-          title: "Chờ kho xác nhận",
+          title: hcm ? "Chờ AM xác nhận" : "Chờ kho xác nhận",
           value: summary.choXacNhan,
           icon: <HourglassEmptyIcon />,
           color: "#6a1b9a",
-          hint: "cần kho xử lý",
+          hint: hcm ? "cần AM xử lý" : "cần kho xử lý",
         },
       ]
     : [];
@@ -297,8 +318,16 @@ export default function Report() {
             </Typography>
 
             <Typography sx={{ opacity: 0.85, mt: 0.5 }}>
-              Khoảng thời gian: {rangeLabel}
-              {kho ? ` · Kho ${shortKhoName(kho)}` : isWarehouse ? " · Tất cả kho phụ trách" : " · Tất cả kho"}
+              {hcm ? "Tổng quan vùng HCM" : "Báo cáo GXT"} · {rangeLabel}
+              {kho
+                ? ` · ${hcm ? "BC" : "Kho"} ${shortKhoName(kho)}`
+                : isWarehouse
+                  ? hcm
+                    ? " · Tất cả bưu cục phụ trách"
+                    : " · Tất cả kho phụ trách"
+                  : hcm
+                    ? " · Tất cả bưu cục"
+                    : " · Tất cả kho"}
             </Typography>
           </Box>
 
@@ -328,7 +357,7 @@ export default function Report() {
             />
             <Chip
               size="small"
-              label={`${summary.daXacNhan} kho đã xác nhận`}
+              label={`${summary.daXacNhan} ${hcm ? "AM" : "kho"} đã xác nhận`}
               sx={{ bgcolor: alpha("#fff", 0.12), color: "#fff", fontWeight: 600 }}
             />
             <Chip
@@ -380,16 +409,28 @@ export default function Report() {
             sx={{ minWidth: 180 }}
           />
 
+          <DuAnSelect
+            user={user}
+            value={duAn}
+            onChange={(e) => setDuAn(e.target.value)}
+          />
+
           <TextField
             select
             size="small"
-            label="Kho"
+            label={hcm ? "Bưu cục" : "Kho"}
             value={kho}
             onChange={(e) => setKho(e.target.value)}
             sx={{ minWidth: 200 }}
           >
             <MenuItem value="">
-              {isWarehouse ? "Tất cả kho phụ trách" : "Tất cả kho"}
+              {isWarehouse
+                ? hcm
+                  ? "Tất cả bưu cục phụ trách"
+                  : "Tất cả kho phụ trách"
+                : hcm
+                  ? "Tất cả bưu cục"
+                  : "Tất cả kho"}
             </MenuItem>
             {khoOptions.map((item) => (
               <MenuItem key={item} value={item}>
@@ -424,6 +465,60 @@ export default function Report() {
               </Grid>
             ))}
           </Grid>
+
+          {hcm && hcmOverview && (
+            <>
+              <SectionHeading
+                icon={<AssessmentIcon fontSize="small" />}
+                hint="Số liệu AM xác nhận để báo cáo sếp: mã chuyến, NVPTTT, đơn gán, km Van"
+              >
+                Tổng quan hiệu suất vùng
+              </SectionHeading>
+              <Grid container spacing={2} mb={4}>
+                {[
+                  {
+                    title: "Số mã chuyến",
+                    value: hcmOverview.soMaChuyen,
+                    icon: <PinIcon />,
+                    color: brand.teal,
+                    hint: "đếm từng mã trong phân công",
+                  },
+                  {
+                    title: "NVPTTT đi theo xe",
+                    value: hcmOverview.soNvpTtt,
+                    icon: <GroupsIcon />,
+                    color: "#1565c0",
+                    hint: "tổng sau AM xác nhận",
+                  },
+                  {
+                    title: "Đơn gán giao",
+                    value: hcmOverview.soDonGanGiao,
+                    icon: <Inventory2Icon />,
+                    color: "#2e7d32",
+                    hint: "tổng sau AM xác nhận",
+                  },
+                  {
+                    title: "Đơn gán lấy",
+                    value: hcmOverview.soDonGanLay,
+                    icon: <Inventory2Icon />,
+                    color: "#00838f",
+                    hint: "tổng sau AM xác nhận",
+                  },
+                  {
+                    title: "Km chạy xe Van",
+                    value: hcmOverview.kmVan,
+                    icon: <LocalShippingIcon />,
+                    color: "#6a1b9a",
+                    hint: "từ ODO Check Out − Check In",
+                  },
+                ].map((card) => (
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.title}>
+                    <StatCard {...card} />
+                  </Grid>
+                ))}
+              </Grid>
+            </>
+          )}
 
           <SectionHeading
             icon={<PersonIcon fontSize="small" />}
@@ -500,13 +595,32 @@ export default function Report() {
                     >
                       Đúng giờ Check Out
                     </TableCell>
+                    {hcm && (
+                      <>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Mã chuyến
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          NVPTTT
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Đơn giao
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Đơn lấy
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Km Van
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {data.byDriver.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={10} align="center">
+                      <TableCell colSpan={hcm ? 15 : 10} align="center">
                         <Typography color="text.secondary" sx={{ py: 3 }}>
                           Không có dữ liệu trong khoảng thời gian này.
                         </Typography>
@@ -570,6 +684,15 @@ export default function Report() {
                           />
                         </Box>
                       </TableCell>
+                      {hcm && (
+                        <>
+                          <TableCell align="center">{d.soMaChuyen ?? 0}</TableCell>
+                          <TableCell align="center">{d.soNvpTtt ?? 0}</TableCell>
+                          <TableCell align="center">{d.soDonGanGiao ?? 0}</TableCell>
+                          <TableCell align="center">{d.soDonGanLay ?? 0}</TableCell>
+                          <TableCell align="center">{d.kmVan ?? 0}</TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -579,9 +702,9 @@ export default function Report() {
 
           <SectionHeading
             icon={<WarehouseIcon fontSize="small" />}
-            hint="Theo dõi xác nhận kho theo từng điểm"
+            hint={hcm ? "Hiệu suất AM theo từng bưu cục" : "Theo dõi xác nhận kho theo từng điểm"}
           >
-            Thống kê theo kho
+            {hcm ? "Thống kê theo bưu cục" : "Thống kê theo kho"}
           </SectionHeading>
 
           <Paper
@@ -598,7 +721,7 @@ export default function Report() {
                 <TableHead>
                   <TableRow sx={{ bgcolor: alpha(brand.teal, 0.06) }}>
                     <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
-                      Kho
+                      {hcm ? "Bưu cục" : "Kho"}
                     </TableCell>
                     <TableCell
                       align="center"
@@ -630,13 +753,32 @@ export default function Report() {
                     >
                       Tỷ lệ xác nhận
                     </TableCell>
+                    {hcm && (
+                      <>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Mã chuyến
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          NVPTTT
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Đơn giao
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Đơn lấy
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                          Km Van
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {data.byWarehouse.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} align="center">
+                      <TableCell colSpan={hcm ? 11 : 6} align="center">
                         <Typography color="text.secondary" sx={{ py: 3 }}>
                           Không có dữ liệu trong khoảng thời gian này.
                         </Typography>
@@ -687,6 +829,15 @@ export default function Report() {
                           />
                         </Box>
                       </TableCell>
+                      {hcm && (
+                        <>
+                          <TableCell align="center">{w.soMaChuyen ?? 0}</TableCell>
+                          <TableCell align="center">{w.soNvpTtt ?? 0}</TableCell>
+                          <TableCell align="center">{w.soDonGanGiao ?? 0}</TableCell>
+                          <TableCell align="center">{w.soDonGanLay ?? 0}</TableCell>
+                          <TableCell align="center">{w.kmVan ?? 0}</TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

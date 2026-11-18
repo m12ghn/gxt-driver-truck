@@ -17,22 +17,24 @@ export const getAlerts = (from, to, kho) => {
   return api.get(`/stats/alerts${dashboardParams(from, to, kho)}`);
 };
 
-export const getReportStats = (from, to, kho) => {
+export const getReportStats = (from, to, kho, duAn) => {
   const params = new URLSearchParams();
 
   if (from) params.append("from", from);
   if (to) params.append("to", to);
   if (kho) params.append("kho", kho);
+  if (duAn) params.append("duAn", duAn);
 
   return api.get(`/stats/report?${params.toString()}`);
 };
 
-export const exportReportExcel = (from, to, kho) => {
+export const exportReportExcel = (from, to, kho, duAn) => {
   const params = new URLSearchParams();
 
   if (from) params.append("from", from);
   if (to) params.append("to", to);
   if (kho) params.append("kho", kho);
+  if (duAn) params.append("duAn", duAn);
 
   return api.get(`/stats/report/export?${params.toString()}`, {
     responseType: "blob",

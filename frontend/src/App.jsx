@@ -211,6 +211,7 @@ export default function App() {
               roles={[
                 "SUPER_ADMIN",
                 "ADMIN",
+                "WAREHOUSE",
               ]}
             >
               <Report />

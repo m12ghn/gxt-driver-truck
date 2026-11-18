@@ -24,6 +24,7 @@ const {
   getCheckOutStatus,
   getMissingCheckInAlert,
 } = require("../utils/shiftHelpers");
+const { parseDuAn, isVungHcm, duAnWhere } = require("../constants/projects");
 
 const ASSIGNMENT_STATS_ATTRS = [
   "id",
@@ -130,6 +131,44 @@ function hasGpsViolation(item) {
   return (
     item.checkInGpsValid === false || item.checkOutGpsValid === false
   );
+}
+
+function toCount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function countTripCodes(raw) {
+  return String(raw || "")
+    .split(/[,;|/]+/)
+    .map((item) => item.trim())
+    .filter(Boolean).length;
+}
+
+function vanKm(item) {
+  const start = Number(item.odoCheckIn);
+  const end = Number(item.odoCheckOut);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
+  return Math.round(end - start);
+}
+
+function emptyAmStats() {
+  return {
+    soMaChuyen: 0,
+    soNvpTtt: 0,
+    soDonGanGiao: 0,
+    soDonGanLay: 0,
+    kmVan: 0,
+  };
+}
+
+function addAmStats(stat, item) {
+  stat.soMaChuyen += countTripCodes(item.maChuyenDi);
+  stat.kmVan += vanKm(item);
+  if (item.warehouseStatus !== "Đã xác nhận") return;
+  stat.soNvpTtt += toCount(item.soNvpTtt);
+  stat.soDonGanGiao += toCount(item.soDonGanGiao);
+  stat.soDonGanLay += toCount(item.soDonGanLay);
 }
 
 // Tính các chỉ số tổng hợp cho 1 danh sách Assignment (dùng chung cho
@@ -484,9 +523,10 @@ exports.getAlerts = async (req, res) => {
 // ==============================
 // Tính toán Report theo khoảng ngày (dùng chung cho JSON + Excel)
 // ==============================
-async function buildReportData({ from, to, kho }) {
+async function buildReportData({ from, to, kho, duAn }) {
   const where = {
     ngay: { [Op.between]: [from, to] },
+    duAn: duAnWhere(duAn),
   };
 
   if (kho) where.kho = warehouseKhoFilter(kho);
@@ -524,6 +564,7 @@ async function buildReportData({ from, to, kho }) {
         gpsViolation: 0,
         gpsCheckIn: 0,
         gpsCheckOut: 0,
+        ...emptyAmStats(),
       });
     }
 
@@ -553,6 +594,7 @@ async function buildReportData({ from, to, kho }) {
     if (item.checkInGpsValid === false) stat.gpsCheckIn++;
     if (item.checkOutGpsValid === false) stat.gpsCheckOut++;
     if (hasGpsViolation(item)) stat.gpsViolation++;
+    addAmStats(stat, item);
   }
 
   const byDriver = Array.from(driverMap.values())
@@ -595,6 +637,7 @@ async function buildReportData({ from, to, kho }) {
         choXacNhan: 0,
         daXacNhan: 0,
         khongXacNhan: 0,
+        ...emptyAmStats(),
       });
     }
 
@@ -604,6 +647,7 @@ async function buildReportData({ from, to, kho }) {
     if (item.warehouseStatus === "Chờ xác nhận") stat.choXacNhan++;
     if (item.warehouseStatus === "Đã xác nhận") stat.daXacNhan++;
     if (item.warehouseStatus === "Không xác nhận") stat.khongXacNhan++;
+    addAmStats(stat, item);
   }
 
   const byWarehouse = Array.from(warehouseMap.values())
@@ -616,7 +660,40 @@ async function buildReportData({ from, to, kho }) {
     }))
     .sort((a, b) => b.total - a.total);
 
-  return { summary, byDriver, byWarehouse };
+  const hcm = isVungHcm(duAn);
+  const amTotals = emptyAmStats();
+  for (const item of assignments) addAmStats(amTotals, item);
+
+  const hcmOverview = hcm
+    ? {
+        ...amTotals,
+        soPhanCong: assignments.length,
+        daXacNhan: summary.daXacNhan,
+        choXacNhan: summary.choXacNhan,
+      }
+    : null;
+
+  const hcmDetails = hcm
+    ? assignments.map((item) => ({
+        ngay: item.ngay,
+        ca: item.ca,
+        kho: item.kho,
+        bienSo: item.Vehicle?.bienSo || "",
+        msnv: item.Driver?.msnv || "",
+        hoTen: item.Driver?.hoTen || "",
+        maChuyenDi: item.maChuyenDi || "",
+        soMaChuyen: countTripCodes(item.maChuyenDi),
+        soNvpTtt: item.warehouseStatus === "Đã xác nhận" ? toCount(item.soNvpTtt) : 0,
+        soDonGanGiao:
+          item.warehouseStatus === "Đã xác nhận" ? toCount(item.soDonGanGiao) : 0,
+        soDonGanLay:
+          item.warehouseStatus === "Đã xác nhận" ? toCount(item.soDonGanLay) : 0,
+        kmVan: vanKm(item),
+        warehouseStatus: item.warehouseStatus || "",
+      }))
+    : [];
+
+  return { summary, byDriver, byWarehouse, hcmOverview, hcmDetails };
 }
 
 // ==============================
@@ -628,10 +705,11 @@ exports.getReportStats = async (req, res) => {
 
     const today = new Date().toISOString().split("T")[0];
 
-    let { from, to, kho } = req.query;
+    let { from, to, kho, duAn } = req.query;
 
     if (!from) from = today;
     if (!to) to = from;
+    duAn = parseDuAn(duAn);
 
     if (isLocationScoped(req.user)) {
       if (kho) {
@@ -648,11 +726,12 @@ exports.getReportStats = async (req, res) => {
       }
     }
 
-    const data = await buildReportData({ from, to, kho });
+    const data = await buildReportData({ from, to, kho, duAn });
+    const { hcmDetails: _hcmDetails, ...payload } = data;
 
     res.json({
       success: true,
-      data,
+      data: payload,
     });
   } catch (err) {
     console.error(err);
@@ -671,10 +750,12 @@ exports.exportReportExcel = async (req, res) => {
   try {
     const today = new Date().toISOString().split("T")[0];
 
-    let { from, to, kho } = req.query;
+    let { from, to, kho, duAn } = req.query;
 
     if (!from) from = today;
     if (!to) to = from;
+    duAn = parseDuAn(duAn);
+    const hcm = isVungHcm(duAn);
 
     if (isLocationScoped(req.user)) {
       if (kho) {
@@ -691,29 +772,49 @@ exports.exportReportExcel = async (req, res) => {
       }
     }
 
-    const { summary, byDriver, byWarehouse } = await buildReportData({
-      from,
-      to,
-      kho,
-    });
+    const { summary, byDriver, byWarehouse, hcmOverview, hcmDetails } =
+      await buildReportData({
+        from,
+        to,
+        kho,
+        duAn,
+      });
 
     const summaryRows = [
-      { "Chỉ số": "Tổng chuyến", "Giá trị": summary.total },
+      { "Chỉ số": "Tổng phân công", "Giá trị": summary.total },
       { "Chỉ số": "Hoàn thành", "Giá trị": summary.hoanThanh },
       { "Chỉ số": "Chưa hoàn thành", "Giá trị": summary.chuaHoanThanh },
       { "Chỉ số": "Trễ giờ Check In", "Giá trị": summary.lateCheckIn },
       { "Chỉ số": "Trễ giờ Check Out", "Giá trị": summary.lateCheckOut },
       { "Chỉ số": "Vi phạm GPS Check In", "Giá trị": summary.gpsCheckIn },
       { "Chỉ số": "Vi phạm GPS Check Out", "Giá trị": summary.gpsCheckOut },
-      { "Chỉ số": "Chờ kho xác nhận", "Giá trị": summary.choXacNhan },
-      { "Chỉ số": "Kho đã xác nhận", "Giá trị": summary.daXacNhan },
-      { "Chỉ số": "Kho không xác nhận", "Giá trị": summary.khongXacNhan },
+      {
+        "Chỉ số": hcm ? "Chờ AM xác nhận" : "Chờ kho xác nhận",
+        "Giá trị": summary.choXacNhan,
+      },
+      {
+        "Chỉ số": hcm ? "AM đã xác nhận" : "Kho đã xác nhận",
+        "Giá trị": summary.daXacNhan,
+      },
+      {
+        "Chỉ số": hcm ? "AM không xác nhận" : "Kho không xác nhận",
+        "Giá trị": summary.khongXacNhan,
+      },
+      ...(hcm && hcmOverview
+        ? [
+            { "Chỉ số": "Số mã chuyến", "Giá trị": hcmOverview.soMaChuyen },
+            { "Chỉ số": "Số NVPTTT đi theo xe", "Giá trị": hcmOverview.soNvpTtt },
+            { "Chỉ số": "Số đơn gán giao", "Giá trị": hcmOverview.soDonGanGiao },
+            { "Chỉ số": "Số đơn gán lấy", "Giá trị": hcmOverview.soDonGanLay },
+            { "Chỉ số": "Số km chạy xe Van", "Giá trị": hcmOverview.kmVan },
+          ]
+        : []),
     ];
 
     const driverRows = byDriver.map((d) => ({
       "MSNV": d.msnv,
       "Họ tên": d.hoTen,
-      "Tổng chuyến": d.total,
+      "Tổng phân công": d.total,
       "Hoàn thành": d.hoanThanh,
       "Trễ Check In": d.lateCheckIn,
       "Trễ Check Out": d.lateCheckOut,
@@ -721,15 +822,33 @@ exports.exportReportExcel = async (req, res) => {
       "Vi phạm GPS Check Out": d.gpsCheckOut,
       "Tỷ lệ đúng giờ Check In (%)": d.onTimeCheckInRate,
       "Tỷ lệ đúng giờ Check Out (%)": d.onTimeCheckOutRate,
+      ...(hcm
+        ? {
+            "Số mã chuyến": d.soMaChuyen,
+            "Số NVPTTT": d.soNvpTtt,
+            "Đơn gán giao": d.soDonGanGiao,
+            "Đơn gán lấy": d.soDonGanLay,
+            "Km Van": d.kmVan,
+          }
+        : {}),
     }));
 
     const warehouseRows = byWarehouse.map((w) => ({
-      "Kho": w.kho,
-      "Tổng chuyến": w.total,
+      [hcm ? "Bưu cục" : "Kho"]: w.kho,
+      "Tổng phân công": w.total,
       "Chờ xác nhận": w.choXacNhan,
       "Đã xác nhận": w.daXacNhan,
       "Không xác nhận": w.khongXacNhan,
       "Tỷ lệ xác nhận (%)": w.confirmRate,
+      ...(hcm
+        ? {
+            "Số mã chuyến": w.soMaChuyen,
+            "Số NVPTTT": w.soNvpTtt,
+            "Đơn gán giao": w.soDonGanGiao,
+            "Đơn gán lấy": w.soDonGanLay,
+            "Km Van": w.kmVan,
+          }
+        : {}),
     }));
 
     const workbook = XLSX.utils.book_new();
@@ -749,8 +868,32 @@ exports.exportReportExcel = async (req, res) => {
     XLSX.utils.book_append_sheet(
       workbook,
       XLSX.utils.json_to_sheet(warehouseRows),
-      "TheoKho"
+      hcm ? "TheoBuuCuc" : "TheoKho"
     );
+
+    if (hcm) {
+      XLSX.utils.book_append_sheet(
+        workbook,
+        XLSX.utils.json_to_sheet(
+          (hcmDetails || []).map((row) => ({
+            "Ngày": row.ngay,
+            "Ca": row.ca,
+            "Bưu cục": row.kho,
+            "Biển số": row.bienSo,
+            "MSNV": row.msnv,
+            "Tài xế": row.hoTen,
+            "AM xác nhận": row.warehouseStatus,
+            "Mã chuyến": row.maChuyenDi,
+            "Số mã chuyến": row.soMaChuyen,
+            "Số NVPTTT đi theo xe": row.soNvpTtt,
+            "Số đơn gán giao": row.soDonGanGiao,
+            "Số đơn gán lấy": row.soDonGanLay,
+            "Số km chạy xe Van": row.kmVan,
+          }))
+        ),
+        "ChiTietVung"
+      );
+    }
 
     const buffer = XLSX.write(workbook, {
       type: "buffer",

@@ -163,7 +163,7 @@ export default function MainLayout() {
       text: "Báo cáo",
       icon: <AssessmentIcon />,
       path: "/report",
-      roles: ["SUPER_ADMIN", "ADMIN"],
+      roles: ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"],
     },
   ];
 
