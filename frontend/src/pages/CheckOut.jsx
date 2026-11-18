@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { getAssignments } from "../api/assignmentApi";
 import { assignmentDuAnForUser } from "../utils/userScope";
+import { isVungHcm } from "../constants/projects";
 import { getCheckOutStatus } from "../utils/shiftHelpers";
 
 import CheckOutDialog from "../components/CheckOutDialog";
 import CheckOutDetailDialog from "../components/CheckOutDetailDialog";
 import AdminCheckoutDialog from "../components/AdminCheckoutDialog";
+import DuAnSelect from "../components/DuAnSelect";
 
 import {
   Box,
@@ -43,6 +45,8 @@ export default function CheckOut() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [duAn, setDuAn] = useState(() => assignmentDuAnForUser(user));
+  const hcm = isVungHcm(duAn);
 
   // Dialog Check Out
   const [openCheckOut, setOpenCheckOut] = useState(false);
@@ -58,14 +62,14 @@ export default function CheckOut() {
 
   useEffect(() => {
     loadAssignments();
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, duAn]);
 
   async function loadAssignments() {
     try {
       const res = await getAssignments(
         fromDate,
         toDate,
-        assignmentDuAnForUser(user)
+        duAn
       );
       setAssignments(res.data.data || []);
     } catch (err) {
@@ -140,9 +144,15 @@ export default function CheckOut() {
             onChange={(e) => setToDate(e.target.value)}
           />
 
+          <DuAnSelect
+            user={user}
+            value={duAn}
+            onChange={(e) => setDuAn(e.target.value)}
+          />
+
           <TextField
             size="small"
-            label="Tìm BSX / MSNV / tên / kho"
+            label={hcm ? "Tìm BSX / MSNV / tên / bưu cục" : "Tìm BSX / MSNV / tên / kho"}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             sx={{ width: 280 }}
@@ -173,7 +183,7 @@ export default function CheckOut() {
 
               <TableCell>Ngày</TableCell>
               <TableCell>Ca</TableCell>
-              <TableCell>Kho</TableCell>
+              <TableCell>{hcm ? "Bưu cục" : "Kho"}</TableCell>
               <TableCell>Biển số</TableCell>
               <TableCell>MSNV</TableCell>
               <TableCell>Tài xế</TableCell>
