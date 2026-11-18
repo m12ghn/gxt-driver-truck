@@ -882,7 +882,8 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
             sx={{ height: 24 }}
           />
 
-          {item.warehouseStatus === "Đã xác nhận" &&
+          {!hcm &&
+            item.warehouseStatus === "Đã xác nhận" &&
             item.maChuyenDi && (
               <Typography
                 variant="caption"
