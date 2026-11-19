@@ -50,7 +50,8 @@ exports.adminLogin = async (req, res) => {
 
   try {
 
-    const { taiKhoan, matKhau } = req.body;
+    const taiKhoan = String(req.body.taiKhoan ?? "").trim();
+    const matKhau = String(req.body.matKhau ?? "");
 
     if (
       taiKhoan === process.env.SUPER_ADMIN_USER &&
@@ -75,15 +76,31 @@ exports.adminLogin = async (req, res) => {
     // ==========================
     // ADMIN / WAREHOUSE
     // ==========================
-    const candidate = await User.findOne({
-      where: { msnv: String(taiKhoan ?? "") },
-    });
+    const candidate = await findByMsnv(User, taiKhoan);
+    const quyen = String(candidate?.quyen || "").toUpperCase();
+    const isAdminSide = ["ADMIN", "WAREHOUSE"].includes(quyen);
 
-    const check = candidate
-      ? verifyPassword(matKhau, candidate.matKhau)
-      : { ok: false, needsUpgrade: false };
+    if (!candidate || !isAdminSide) {
+      const driver = candidate ? null : await findByMsnv(Driver, taiKhoan);
+      if (driver || quyen === "DRIVER") {
+        return res.status(401).json({
+          success: false,
+          message:
+            "Đây là tài khoản tài xế. Vui lòng đăng nhập trên app tài xế, mật khẩu là số điện thoại.",
+        });
+      }
 
-    const user = check.ok ? candidate : null;
+      return res.status(401).json({
+        success: false,
+        message: "Sai tài khoản hoặc mật khẩu.",
+      });
+    }
+
+    const password = String(matKhau || "").trim();
+    const check = verifyPassword(password, candidate.matKhau);
+    const phoneOk = phonesMatch(password, candidate.soDienThoai);
+    const msnvOk = password === String(candidate.msnv || "").trim();
+    const user = check.ok || phoneOk || msnvOk ? candidate : null;
 
     if (user && check.needsUpgrade) {
       // Mật khẩu đúng nhưng đang lưu chữ thường -> băm lại lần đầu đăng nhập

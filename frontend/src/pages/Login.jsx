@@ -128,7 +128,8 @@ export default function Login() {
         </Typography>
 
         <Typography color="text.secondary" mb={3}>
-          Dành cho Admin / Kho
+          Dành cho Admin / Kho. Mật khẩu mặc định là MSNV, cũng có thể dùng số
+          điện thoại.
         </Typography>
 
         <TextField
