@@ -18,6 +18,10 @@ import DirectionsIcon from "@mui/icons-material/Directions";
 
 import { getTodayAssignment } from "../api/assignmentApi";
 import BottomNav from "../components/BottomNav";
+import {
+  directionsLabel,
+  mapsDirectionsUrl,
+} from "../utils/mapsDirections";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -84,10 +88,6 @@ export default function Home() {
   function formatDateTime(date) {
     if (!date) return "-";
     return new Date(date).toLocaleString("vi-VN");
-  }
-
-  function mapsDirectionsUrl(lat, lng) {
-    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
   }
 
   function renderTrangThaiChip(trangThai) {
@@ -249,23 +249,17 @@ export default function Home() {
               </Box>
             )}
 
-          {Number.isFinite(Number(assignment.location?.latitude)) &&
-            Number.isFinite(Number(assignment.location?.longitude)) && (
+          {mapsDirectionsUrl(assignment) && (
               <Button
                 fullWidth
                 variant="outlined"
                 startIcon={<DirectionsIcon />}
-                href={mapsDirectionsUrl(
-                  assignment.location.latitude,
-                  assignment.location.longitude
-                )}
+                href={mapsDirectionsUrl(assignment)}
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{ mt: 2 }}
               >
-                {assignment.location?.isBuuCuc || assignment.duAn === "VUNG_HCM"
-                  ? "Chỉ đường đến bưu cục"
-                  : "Chỉ đường đến kho"}
+                {directionsLabel(assignment)}
               </Button>
             )}
 

@@ -23,6 +23,10 @@ import { PHOTO_STEPS } from "../constants/photoSteps";
 import { driverCheckIn, driverCheckOut, getTodayAssignment } from "../api/assignmentApi";
 import { uploadErrorMessage } from "../utils/compressImage";
 import { uploadDriverPhotos } from "../utils/uploadPhoto";
+import {
+  directionsLabel,
+  mapsDirectionsUrl,
+} from "../utils/mapsDirections";
 
 const MAX_DAILY_KM = 100;
 
@@ -437,19 +441,16 @@ export default function CheckInOutWizard({ mode }) {
         </DialogContent>
 
         <DialogActions sx={{ flexDirection: "column", gap: 1, p: 2 }}>
-          {Number.isFinite(Number(assignment?.location?.latitude)) &&
-            Number.isFinite(Number(assignment?.location?.longitude)) && (
+          {mapsDirectionsUrl(assignment) && (
               <Button
                 fullWidth
                 variant="outlined"
                 startIcon={<DirectionsIcon />}
-                href={`https://www.google.com/maps/dir/?api=1&destination=${assignment.location.latitude},${assignment.location.longitude}&travelmode=driving`}
+                href={mapsDirectionsUrl(assignment)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {assignment.location?.isBuuCuc || assignment.duAn === "VUNG_HCM"
-                  ? "Chỉ đường đến bưu cục"
-                  : "Chỉ đường đến kho"}
+                {directionsLabel(assignment)}
               </Button>
             )}
           <Button
