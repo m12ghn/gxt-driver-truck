@@ -46,6 +46,13 @@ import {
 import { DU_AN_GXT, isVungHcm } from "../constants/projects";
 import { isLocationScoped } from "../utils/userScope";
 
+function tripKm(item) {
+  const start = Number(item?.odoCheckIn);
+  const end = Number(item?.odoCheckOut);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return Math.round(end - start);
+}
+
 export default function Assignment({ duAn = DU_AN_GXT }) {
 
   const user = JSON.parse(
@@ -759,11 +766,22 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
       )}
 
       {item.trangThai === "Hoàn thành" && (
-        <Chip
-          label="Hoàn thành"
-          color="success"
-          size="small"
-        />
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Chip
+            label="Hoàn thành"
+            color="success"
+            size="small"
+          />
+          {tripKm(item) != null && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "nowrap", fontWeight: 600 }}
+            >
+              {tripKm(item)} km
+            </Typography>
+          )}
+        </Stack>
       )}
 
     </TableCell>
