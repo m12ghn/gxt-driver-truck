@@ -18,7 +18,6 @@ import {
 import { getCheckInStatus } from "../utils/shiftHelpers";
 import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
 import { updateAssignmentOdo } from "../api/assignmentApi";
-import OdoPhotoCompare from "./OdoPhotoCompare";
 
 export default function CheckInDetailDialog({
   open,
@@ -28,7 +27,6 @@ export default function CheckInDetailDialog({
 }) {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const canEditOdo = user?.quyen === "SUPER_ADMIN";
-  const canFlagOdo = ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"].includes(user?.quyen);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -204,9 +202,6 @@ export default function CheckInDetailDialog({
                 {assignment.odoCheckIn || "-"}
               </Typography>
             )}
-            {assignment.odoCheckInMismatch && (
-              <Chip size="small" color="error" label="ODO lệch ảnh" sx={{ mt: 0.75 }} />
-            )}
           </Grid>
 
           <Grid size={{ xs: 6 }}>
@@ -237,17 +232,6 @@ export default function CheckInDetailDialog({
             <b>{Math.round(assignment.checkInDistanceMeters)}m</b>.
           </Alert>
         )}
-
-        <OdoPhotoCompare
-          assignment={assignment}
-          side="checkin"
-          odo={assignment.odoCheckIn}
-          aiReading={assignment.odoCheckInAi}
-          photos={assignment.checkInPhotos}
-          mismatch={assignment.odoCheckInMismatch}
-          canFlag={canFlagOdo}
-          onUpdated={onUpdated}
-        />
 
         <Divider sx={{ my: 3 }} />
 

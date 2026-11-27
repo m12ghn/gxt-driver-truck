@@ -4,5 +4,5 @@ export const PHOTO_STEPS = [
   { key: "hongTrai", label: "Chụp hông trái xe" },
   { key: "hongPhai", label: "Chụp hông phải xe" },
   { key: "banhSoCua", label: "Chụp bánh sơ cua" },
-  { key: "manOdo", label: "Chụp sát số km trên màn ODO" },
+  { key: "manOdo", label: "Chụp màn hình ODO (thấy rõ số)" },
 ];

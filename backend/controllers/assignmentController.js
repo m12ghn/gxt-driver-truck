@@ -27,7 +27,6 @@ const {
 const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
   parseOdo,
-  odoValuesMatch,
   findPreviousOdo,
   validateCheckInOdo,
   validateCheckOutOdo,
@@ -1174,104 +1173,6 @@ exports.updateAssignmentOdo = async (req, res) => {
       success: true,
       message: warning || "Cập nhật ODO thành công.",
       warning,
-      data: assignment,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-exports.flagOdoMismatch = async (req, res) => {
-  try {
-    await ensureAssignmentColumns();
-
-    const assignment = await Assignment.findByPk(req.params.id);
-    if (!assignment) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy phân công.",
-      });
-    }
-
-    if (denyIfOutOfScope(req, res, assignment)) return;
-
-    const side = String(req.body?.side || "").toLowerCase();
-    const hasMismatch = Object.prototype.hasOwnProperty.call(
-      req.body || {},
-      "mismatch"
-    );
-    const hasReading = Object.prototype.hasOwnProperty.call(
-      req.body || {},
-      "reading"
-    );
-    const mismatch = Boolean(req.body?.mismatch);
-    const patch = {};
-
-    if (side === "checkin") {
-      if (!assignment.checkInTime) {
-        return res.status(400).json({
-          success: false,
-          message: "Chuyến này chưa Check In.",
-        });
-      }
-      if (hasMismatch) patch.odoCheckInMismatch = mismatch;
-      if (hasReading) {
-        const reading = parseOdo(req.body.reading);
-        patch.odoCheckInAi = reading;
-        if (reading != null && assignment.odoCheckIn != null) {
-          patch.odoCheckInMismatch = !odoValuesMatch(
-            assignment.odoCheckIn,
-            reading
-          );
-        }
-      }
-    } else if (side === "checkout") {
-      if (!assignment.checkOutTime) {
-        return res.status(400).json({
-          success: false,
-          message: "Chuyến này chưa Check Out.",
-        });
-      }
-      if (hasMismatch) patch.odoCheckOutMismatch = mismatch;
-      if (hasReading) {
-        const reading = parseOdo(req.body.reading);
-        patch.odoCheckOutAi = reading;
-        if (reading != null && assignment.odoCheckOut != null) {
-          patch.odoCheckOutMismatch = !odoValuesMatch(
-            assignment.odoCheckOut,
-            reading
-          );
-        }
-      }
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Chọn Check In hoặc Check Out để gắn cờ ODO.",
-      });
-    }
-
-    if (!Object.keys(patch).length) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu dữ liệu đối chiếu ODO.",
-      });
-    }
-
-    await assignment.update(patch);
-
-    const flagged =
-      patch.odoCheckInMismatch === true ||
-      patch.odoCheckOutMismatch === true;
-    res.json({
-      success: true,
-      message: hasReading
-        ? "Đã lưu số đọc từ ảnh ODO."
-        : flagged
-          ? "Đã gắn cờ ODO lệch ảnh."
-          : "Đã bỏ cờ ODO lệch ảnh.",
       data: assignment,
     });
   } catch (err) {

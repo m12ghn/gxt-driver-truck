@@ -15,19 +15,6 @@ function parseOdo(value) {
   return Math.round(km);
 }
 
-function normalizeOdoDigits(value) {
-  const digits = String(value ?? "").replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.replace(/^0+(?=\d)/, "");
-}
-
-function odoValuesMatch(entered, read) {
-  const a = normalizeOdoDigits(entered);
-  const b = normalizeOdoDigits(read);
-  if (!a || !b) return false;
-  return a === b;
-}
-
 function fail(status, body) {
   return { ok: false, status, body: { success: false, ...body } };
 }
@@ -135,8 +122,6 @@ module.exports = {
   MAX_DAILY_KM,
   isConfirmed,
   parseOdo,
-  normalizeOdoDigits,
-  odoValuesMatch,
   findPreviousOdo,
   validateCheckInOdo,
   validateCheckOutOdo,

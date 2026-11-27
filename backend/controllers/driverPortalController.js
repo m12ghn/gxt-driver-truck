@@ -24,9 +24,7 @@ const { syncVehicleKmFromOdo } = require("../utils/syncVehicleKm");
 const {
   validateCheckInOdo,
   validateCheckOutOdo,
-  parseOdo,
 } = require("../utils/odoHelpers");
-const { ensureAssignmentColumns } = require("../utils/ensureAssignmentColumns");
 
 async function resolveLocationForAssignment(assignment) {
   await ensureWarehouses();
@@ -35,12 +33,6 @@ async function resolveLocationForAssignment(assignment) {
 
 function locationLabel(assignment) {
   return isVungHcm(assignment?.duAn) ? "bưu cục" : "kho";
-}
-
-function parseAiMatch(value) {
-  if (value === true || value === "true") return true;
-  if (value === false || value === "false") return false;
-  return null;
 }
 
 function publicErrorMessage(err, fallback) {
@@ -228,10 +220,7 @@ exports.driverCheckIn = async (req, res) => {
     }
 
     const checkInPhotos = resolved.photos;
-    const odoAiReading = parseOdo(req.body.odoAiReading);
-    const odoAiMatch = parseAiMatch(req.body.odoAiMatch);
 
-    await ensureAssignmentColumns();
     await assignment.update({
       trangThai: "Đã Check In",
       checkInTime: new Date(),
@@ -241,8 +230,6 @@ exports.driverCheckIn = async (req, res) => {
       checkInDistanceMeters: distance,
       checkInGpsValid: gpsValid,
       checkInPhotos,
-      odoCheckInAi: odoAiReading,
-      odoCheckInMismatch: odoAiMatch === false,
     });
 
     await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckIn).catch((err) =>
@@ -373,10 +360,7 @@ exports.driverCheckOut = async (req, res) => {
     }
 
     const checkOutPhotos = resolved.photos;
-    const odoAiReading = parseOdo(req.body.odoAiReading);
-    const odoAiMatch = parseAiMatch(req.body.odoAiMatch);
 
-    await ensureAssignmentColumns();
     await assignment.update({
       trangThai: "Hoàn thành",
       checkOutTime: new Date(),
@@ -387,8 +371,6 @@ exports.driverCheckOut = async (req, res) => {
       checkOutGpsValid: gpsValid,
       checkOutPhotos,
       warehouseStatus: "Chờ xác nhận",
-      odoCheckOutAi: odoAiReading,
-      odoCheckOutMismatch: odoAiMatch === false,
     });
 
     await syncVehicleKmFromOdo(assignment.vehicleId, odoCheckOut).catch((err) =>

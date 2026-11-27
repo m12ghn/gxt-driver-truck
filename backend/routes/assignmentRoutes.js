@@ -133,12 +133,6 @@ router.put(
   assignmentController.updateAssignmentOdo
 );
 
-router.put(
-  "/:id/odo-mismatch",
-  adminSide,
-  assignmentController.flagOdoMismatch
-);
-
 // ==============================
 // Cập nhật phân công
 // ==============================

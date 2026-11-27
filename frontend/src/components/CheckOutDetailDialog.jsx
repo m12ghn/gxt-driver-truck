@@ -14,7 +14,6 @@ import {
 
 import { buildImageUrl, DRIVER_PHOTO_LABELS } from "../utils/imageUrl";
 import { getCheckOutStatus } from "../utils/shiftHelpers";
-import OdoPhotoCompare from "./OdoPhotoCompare";
 
 export default function CheckOutDetailDialog({
   open,
@@ -22,9 +21,6 @@ export default function CheckOutDetailDialog({
   assignment,
   onUpdated,
 }) {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const canFlagOdo = ["SUPER_ADMIN", "ADMIN", "WAREHOUSE"].includes(user?.quyen);
-
   if (!assignment) return null;
 
   const checkOutStatus = getCheckOutStatus(
@@ -147,9 +143,6 @@ export default function CheckOutDetailDialog({
             <Typography>
               {assignment.odoCheckOut || "-"}
             </Typography>
-            {assignment.odoCheckOutMismatch && (
-              <Chip size="small" color="error" label="ODO lệch ảnh" sx={{ mt: 0.75 }} />
-            )}
           </Grid>
 
           <Grid size={{ xs: 6 }}>
@@ -180,17 +173,6 @@ export default function CheckOutDetailDialog({
             <b>{Math.round(assignment.checkOutDistanceMeters)}m</b>.
           </Alert>
         )}
-
-        <OdoPhotoCompare
-          assignment={assignment}
-          side="checkout"
-          odo={assignment.odoCheckOut}
-          aiReading={assignment.odoCheckOutAi}
-          photos={assignment.checkOutPhotos}
-          mismatch={assignment.odoCheckOutMismatch}
-          canFlag={canFlagOdo}
-          onUpdated={onUpdated}
-        />
 
         <Divider sx={{ my: 3 }} />
 
