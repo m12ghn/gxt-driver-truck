@@ -32,6 +32,7 @@ import { getWarehouses } from "../api/warehouseApi";
 import { updateAssignmentOdo } from "../api/assignmentApi";
 import WarehouseGpsMap from "./WarehouseGpsMap";
 import { isVungHcm } from "../constants/projects";
+import OdoPhotoCompare from "./OdoPhotoCompare";
 
 function formatDateTime(date) {
   if (!date) return "-";
@@ -204,6 +205,7 @@ function CheckSection({
   photos,
   emptyMessage,
   extra,
+  odoCompare,
 }) {
   const hasData = Boolean(time);
 
@@ -291,6 +293,8 @@ function CheckSection({
           )}
 
           {extra}
+
+          {odoCompare}
 
           <Divider sx={{ my: 2 }} />
 
@@ -639,6 +643,22 @@ export default function AssignmentDetailDialog({
               gpsLabel="Check In"
               photos={assignment.checkInPhotos}
               emptyMessage="Chưa Check In."
+              odoCompare={
+                assignment.checkInTime ? (
+                  <OdoPhotoCompare
+                    assignment={assignment}
+                    side="checkin"
+                    odo={assignment.odoCheckIn}
+                    aiReading={assignment.odoCheckInAi}
+                    photos={assignment.checkInPhotos}
+                    mismatch={assignment.odoCheckInMismatch}
+                    canFlag={["SUPER_ADMIN", "ADMIN", "WAREHOUSE"].includes(
+                      user?.quyen
+                    )}
+                    onUpdated={onUpdated}
+                  />
+                ) : null
+              }
             />
           </Grid>
 
@@ -665,6 +685,22 @@ export default function AssignmentDetailDialog({
               gpsLabel="Check Out"
               photos={assignment.checkOutPhotos}
               emptyMessage="Chưa Check Out."
+              odoCompare={
+                assignment.checkOutTime ? (
+                  <OdoPhotoCompare
+                    assignment={assignment}
+                    side="checkout"
+                    odo={assignment.odoCheckOut}
+                    aiReading={assignment.odoCheckOutAi}
+                    photos={assignment.checkOutPhotos}
+                    mismatch={assignment.odoCheckOutMismatch}
+                    canFlag={["SUPER_ADMIN", "ADMIN", "WAREHOUSE"].includes(
+                      user?.quyen
+                    )}
+                    onUpdated={onUpdated}
+                  />
+                ) : null
+              }
               extra={
                 assignment.checkOutBy ? (
                   <Alert severity="info" sx={{ mb: 1 }}>

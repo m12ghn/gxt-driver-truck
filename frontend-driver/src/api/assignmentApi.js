@@ -60,3 +60,10 @@ export const reportIncident = (id, data) => {
 export const getIncidents = (id) => {
   return api.get(`/assignments/${id}/incidents`);
 };
+
+export const verifyOdoPhoto = (photoBlob, odo) => {
+  const formData = new FormData();
+  formData.append("photo", photoBlob, "odo.jpg");
+  formData.append("odo", String(odo));
+  return api.post("/assignments/verify-odo", formData);
+};

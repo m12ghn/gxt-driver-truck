@@ -781,6 +781,9 @@ export default function Assignment({ duAn = DU_AN_GXT }) {
               {tripKm(item)} km
             </Typography>
           )}
+          {(item.odoCheckInMismatch || item.odoCheckOutMismatch) && (
+            <Chip size="small" color="error" label="ODO lệch ảnh" />
+          )}
         </Stack>
       )}
 

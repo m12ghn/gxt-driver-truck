@@ -41,6 +41,40 @@ async function ensureAssignmentColumns() {
     console.log("✅ Added column Assignments.soDonGanLay");
   }
 
+  if (!table.odoCheckInMismatch) {
+    await qi.addColumn("Assignments", "odoCheckInMismatch", {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    });
+    console.log("✅ Added column Assignments.odoCheckInMismatch");
+  }
+
+  if (!table.odoCheckOutMismatch) {
+    await qi.addColumn("Assignments", "odoCheckOutMismatch", {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    });
+    console.log("✅ Added column Assignments.odoCheckOutMismatch");
+  }
+
+  if (!table.odoCheckInAi) {
+    await qi.addColumn("Assignments", "odoCheckInAi", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+    console.log("✅ Added column Assignments.odoCheckInAi");
+  }
+
+  if (!table.odoCheckOutAi) {
+    await qi.addColumn("Assignments", "odoCheckOutAi", {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    });
+    console.log("✅ Added column Assignments.odoCheckOutAi");
+  }
+
   if (!table.duAn) {
     await qi.addColumn("Assignments", "duAn", {
       type: DataTypes.STRING,

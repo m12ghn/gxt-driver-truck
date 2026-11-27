@@ -148,6 +148,28 @@ const Assignment = sequelize.define("Assignment", {
     allowNull: true,
   },
 
+  odoCheckInMismatch: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
+
+  odoCheckOutMismatch: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+  },
+
+  odoCheckInAi: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  odoCheckOutAi: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
   // Admin Check Out hộ khi driver quên Check Out
   checkOutBy: {
     type: DataTypes.STRING,

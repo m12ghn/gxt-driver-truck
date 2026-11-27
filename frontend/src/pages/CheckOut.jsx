@@ -254,6 +254,15 @@ export default function CheckOut() {
                 <TableCell>
                   {formatDateTime(item.checkOutTime)}
 
+                  {item.odoCheckOutMismatch && (
+                    <Chip
+                      size="small"
+                      sx={{ ml: 1 }}
+                      label="ODO lệch ảnh"
+                      color="error"
+                    />
+                  )}
+
                   {item.checkOutTime
                     ? (() => {
                         const status = getCheckOutStatus(
@@ -401,6 +410,10 @@ export default function CheckOut() {
         open={openDetail}
         assignment={selectedAssignment}
         onClose={() => setOpenDetail(false)}
+        onUpdated={(next) => {
+          setSelectedAssignment(next);
+          loadAssignments();
+        }}
       />
 
     </Box>

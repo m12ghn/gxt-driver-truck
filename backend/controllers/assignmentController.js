@@ -1183,6 +1183,64 @@ exports.updateAssignmentOdo = async (req, res) => {
   }
 };
 
+exports.flagOdoMismatch = async (req, res) => {
+  try {
+    await ensureAssignmentColumns();
+
+    const assignment = await Assignment.findByPk(req.params.id);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy phân công.",
+      });
+    }
+
+    if (denyIfOutOfScope(req, res, assignment)) return;
+
+    const side = String(req.body?.side || "").toLowerCase();
+    const mismatch = Boolean(req.body?.mismatch);
+    const patch = {};
+
+    if (side === "checkin") {
+      if (!assignment.checkInTime) {
+        return res.status(400).json({
+          success: false,
+          message: "Chuyến này chưa Check In.",
+        });
+      }
+      patch.odoCheckInMismatch = mismatch;
+    } else if (side === "checkout") {
+      if (!assignment.checkOutTime) {
+        return res.status(400).json({
+          success: false,
+          message: "Chuyến này chưa Check Out.",
+        });
+      }
+      patch.odoCheckOutMismatch = mismatch;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Chọn Check In hoặc Check Out để gắn cờ ODO.",
+      });
+    }
+
+    await assignment.update(patch);
+
+    res.json({
+      success: true,
+      message: mismatch
+        ? "Đã gắn cờ ODO lệch ảnh."
+        : "Đã bỏ cờ ODO lệch ảnh.",
+      data: assignment,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 // ==============================
 // Xóa phân công
 // ==============================

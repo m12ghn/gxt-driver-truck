@@ -250,6 +250,15 @@ export default function CheckIn() {
                 <TableCell>
                   {formatDateTime(item.checkInTime)}
 
+                  {item.odoCheckInMismatch && (
+                    <Chip
+                      size="small"
+                      sx={{ ml: 1 }}
+                      label="ODO lệch ảnh"
+                      color="error"
+                    />
+                  )}
+
                   {(() => {
                     const status = getCheckInStatus(
                       item.checkInTime,

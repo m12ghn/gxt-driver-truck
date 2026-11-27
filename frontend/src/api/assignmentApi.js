@@ -89,6 +89,10 @@ export const updateAssignmentOdo = (id, data) => {
   return api.put(`/assignments/${id}/odo`, data);
 };
 
+export const flagOdoMismatch = (id, data) => {
+  return api.put(`/assignments/${id}/odo-mismatch`, data);
+};
+
 // ==============================
 // Cập nhật phân công
 // ==============================

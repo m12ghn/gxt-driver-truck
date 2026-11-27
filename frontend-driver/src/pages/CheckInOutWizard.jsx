@@ -12,6 +12,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -20,7 +22,12 @@ import DirectionsIcon from "@mui/icons-material/Directions";
 
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
-import { driverCheckIn, driverCheckOut, getTodayAssignment } from "../api/assignmentApi";
+import {
+  driverCheckIn,
+  driverCheckOut,
+  getTodayAssignment,
+  verifyOdoPhoto,
+} from "../api/assignmentApi";
 import { uploadErrorMessage } from "../utils/compressImage";
 import { uploadDriverPhotos } from "../utils/uploadPhoto";
 import {
@@ -30,9 +37,9 @@ import {
 
 const MAX_DAILY_KM = 100;
 
-// step 0 : nhập ODO
-// step 1 : danh sách 6 ảnh cần chụp (chụp tự do, không theo thứ tự)
-// step 2 : xem lại + xác nhận gửi
+// step 0 : nhập số ODO
+// step 1 : chụp 6 ảnh (gồm màn ODO)
+// step 2 : AI đọc ảnh + xem lại
 
 const STEP_ODO = 0;
 const STEP_PHOTOS = 1;
@@ -69,6 +76,8 @@ export default function CheckInOutWizard({ mode }) {
   const [odoAlert, setOdoAlert] = useState(null);
   const [assignment, setAssignment] = useState(null);
   const [confirmAbnormalOdo, setConfirmAbnormalOdo] = useState(false);
+  const [aiVerify, setAiVerify] = useState(null);
+  const [aiOverride, setAiOverride] = useState(false);
   const uploadedPhotosRef = useRef(null);
 
   useEffect(() => {
@@ -119,7 +128,69 @@ export default function CheckInOutWizard({ mode }) {
       }
     }
 
+    setAiOverride(false);
+    setAiVerify(null);
     setStep(STEP_PHOTOS);
+  }
+
+  async function runOdoAi() {
+    if (!photos.manOdo) {
+      setAiVerify({
+        status: "unreadable",
+        match: false,
+        message: "Thiếu ảnh màn hình ODO để AI đối chiếu.",
+      });
+      return;
+    }
+
+    setAiVerify({ status: "loading", message: "AI đang đọc ảnh ODO..." });
+    try {
+      const res = await verifyOdoPhoto(photos.manOdo, odo);
+      const data = res.data?.data || {};
+      if (data.match) {
+        setAiVerify({
+          status: "ok",
+          match: true,
+          reading: data.reading,
+          message: data.message,
+        });
+        setAiOverride(false);
+        return;
+      }
+      setAiVerify({
+        status: data.readable === false ? "unreadable" : "mismatch",
+        match: false,
+        reading: data.reading,
+        message: data.message,
+      });
+      setOdoAlert({
+        type: "ai",
+        message: data.message,
+      });
+    } catch (err) {
+      if (err.response?.data?.skipped || err.response?.status === 503) {
+        setAiVerify({
+          status: "skipped",
+          match: null,
+          message:
+            err.response?.data?.message ||
+            "Chưa bật AI đọc ảnh. Hệ thống bỏ qua đối chiếu lần này.",
+        });
+        return;
+      }
+      setAiVerify({
+        status: "error",
+        match: null,
+        message:
+          err.response?.data?.message ||
+          "AI đọc ảnh thất bại. Bạn có thể chụp lại hoặc tiếp tục.",
+      });
+    }
+  }
+
+  async function handlePhotosDone() {
+    setStep(STEP_REVIEW);
+    await runOdoAi();
   }
 
   function handlePhotoConfirm(key, blob) {
@@ -180,7 +251,27 @@ export default function CheckInOutWizard({ mode }) {
     }
   }
 
-  async function handleSubmit(confirmOdo = confirmAbnormalOdo) {
+  async function handleSubmit(
+    confirmOdo = confirmAbnormalOdo,
+    overrideAi = aiOverride
+  ) {
+    if (aiVerify?.status === "loading") {
+      alert("Đợi AI đọc ảnh ODO xong rồi gửi.");
+      return;
+    }
+    if (
+      (aiVerify?.status === "mismatch" || aiVerify?.status === "unreadable") &&
+      !overrideAi
+    ) {
+      setOdoAlert({
+        type: "ai",
+        message:
+          aiVerify.message ||
+          "Số ODO bạn nhập không khớp với ảnh. Vui lòng kiểm tra lại.",
+      });
+      return;
+    }
+
     setSubmitting(true);
     setSubmitStatus("Đang lấy GPS và tải ảnh...");
 
@@ -214,6 +305,14 @@ export default function CheckInOutWizard({ mode }) {
         payload.checkOutLongitude = position.coords.longitude;
         payload.confirmAbnormalOdo = confirmOdo;
         setSubmitStatus("Đang gửi check-out...");
+      }
+
+      if (aiVerify?.reading != null) {
+        payload.odoAiReading = aiVerify.reading;
+      }
+      if (aiVerify?.status === "ok") payload.odoAiMatch = true;
+      if (aiVerify?.status === "mismatch" || aiVerify?.status === "unreadable") {
+        payload.odoAiMatch = false;
       }
 
       await sendCheckPayload(payload);
@@ -250,7 +349,7 @@ export default function CheckInOutWizard({ mode }) {
     }
 
     if (step === STEP_PHOTOS) {
-      navigate("/");
+      setStep(STEP_ODO);
       return;
     }
 
@@ -304,7 +403,9 @@ export default function CheckInOutWizard({ mode }) {
 
       {step === STEP_ODO && (
         <Paper sx={{ p: 3, borderRadius: 3 }}>
-          <Typography sx={{ mb: 2 }}>Nhập số ODO hiện tại trên xe.</Typography>
+          <Typography sx={{ mb: 1.5 }} fontWeight={700}>
+            Nhập số ODO trên đồng hồ xe.
+          </Typography>
 
           <TextField
             fullWidth
@@ -332,7 +433,7 @@ export default function CheckInOutWizard({ mode }) {
             size="large"
             onClick={handleOdoNext}
           >
-            TIẾP TỤC
+            TIẾP TỤC CHỤP ẢNH
           </Button>
         </Paper>
       )}
@@ -341,7 +442,7 @@ export default function CheckInOutWizard({ mode }) {
         <PhotoChecklist
           photoUrls={photoUrls}
           onPhotoConfirm={handlePhotoConfirm}
-          onAllDone={() => setStep(STEP_REVIEW)}
+          onAllDone={handlePhotosDone}
         />
       )}
 
@@ -351,9 +452,65 @@ export default function CheckInOutWizard({ mode }) {
             Xem lại trước khi gửi
           </Typography>
 
-          <Typography sx={{ mb: 2 }}>
+          <Typography sx={{ mb: 1.5 }}>
             Số ODO: <b>{odo}</b>
           </Typography>
+
+          {photoUrls.manOdo && (
+            <Box
+              component="img"
+              src={photoUrls.manOdo}
+              alt="Màn hình ODO"
+              sx={{
+                width: "100%",
+                maxHeight: 220,
+                objectFit: "contain",
+                borderRadius: 2,
+                bgcolor: "#111",
+                mb: 2,
+              }}
+            />
+          )}
+
+          {aiVerify?.status === "loading" && (
+            <Alert
+              icon={<CircularProgress size={18} />}
+              severity="info"
+              sx={{ mb: 2 }}
+            >
+              {aiVerify.message}
+            </Alert>
+          )}
+          {aiVerify?.status === "ok" && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {aiVerify.message || "AI xác nhận số ODO khớp ảnh."}
+            </Alert>
+          )}
+          {(aiVerify?.status === "mismatch" ||
+            aiVerify?.status === "unreadable") && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {aiVerify.message}
+              {aiOverride ? " Bạn đã xác nhận số nhập là đúng." : ""}
+            </Alert>
+          )}
+          {aiVerify?.status === "skipped" && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {aiVerify.message}
+            </Alert>
+          )}
+          {aiVerify?.status === "error" && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={runOdoAi}>
+                  Thử lại
+                </Button>
+              }
+            >
+              {aiVerify.message}
+            </Alert>
+          )}
 
           <Grid container spacing={1} mb={3}>
             {PHOTO_STEPS.map(({ key, label }) => (
@@ -383,7 +540,7 @@ export default function CheckInOutWizard({ mode }) {
             variant="contained"
             color={isCheckIn ? "primary" : "warning"}
             size="large"
-            disabled={submitting}
+            disabled={submitting || aiVerify?.status === "loading"}
             onClick={() => handleSubmit()}
           >
             {submitting
@@ -396,7 +553,7 @@ export default function CheckInOutWizard({ mode }) {
       <Dialog open={Boolean(odoAlert)} onClose={() => setOdoAlert(null)}>
         <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <WarningAmberIcon color="warning" />
-          ODO bất thường
+          {odoAlert?.type === "ai" ? "ODO lệch ảnh" : "ODO bất thường"}
         </DialogTitle>
 
         <DialogContent>
@@ -407,25 +564,34 @@ export default function CheckInOutWizard({ mode }) {
           <Button
             fullWidth
             variant="outlined"
-            onClick={() => setOdoAlert(null)}
+            onClick={() => {
+              setOdoAlert(null);
+              if (odoAlert?.type === "ai") setStep(STEP_PHOTOS);
+            }}
           >
-            Kiểm tra lại
+            {odoAlert?.type === "ai" ? "Chụp lại ảnh ODO" : "Kiểm tra lại"}
           </Button>
           <Button
             fullWidth
             variant="contained"
             color="warning"
             onClick={() => {
+              const isAi = odoAlert?.type === "ai";
               setOdoAlert(null);
+              if (isAi) {
+                setAiOverride(true);
+                handleSubmit(confirmAbnormalOdo, true);
+                return;
+              }
               setConfirmAbnormalOdo(true);
               if (step === STEP_ODO) {
                 setStep(STEP_PHOTOS);
                 return;
               }
-              handleSubmit(true);
+              handleSubmit(true, overrideAi);
             }}
           >
-            Số đúng, tiếp tục hoàn thành
+            Số đúng, tiếp tục
           </Button>
         </DialogActions>
       </Dialog>
