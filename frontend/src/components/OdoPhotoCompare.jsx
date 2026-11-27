@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { buildImageUrl } from "../utils/imageUrl";
 import { flagOdoMismatch } from "../api/assignmentApi";
@@ -20,64 +20,56 @@ export default function OdoPhotoCompare({
   const [ocrStatus, setOcrStatus] = useState(
     aiReading != null ? "done" : url ? "idle" : "empty"
   );
+  const assignmentRef = useRef(assignment);
+  const onUpdatedRef = useRef(onUpdated);
+  assignmentRef.current = assignment;
+  onUpdatedRef.current = onUpdated;
 
   useEffect(() => {
     setReading(aiReading);
     if (aiReading != null) setOcrStatus("done");
   }, [aiReading]);
 
-  useEffect(() => {
-    if (aiReading != null || !url) return undefined;
-    let cancelled = false;
-
-    async function run() {
-      setOcrStatus("loading");
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Không tải được ảnh ODO.");
-        const blob = await response.blob();
-        const parsed = await readOdoFromPhoto(blob);
-        if (cancelled) return;
-        if (!parsed) {
-          setOcrStatus("empty");
-          if (mismatch) {
-            const res = await flagOdoMismatch(assignment.id, {
-              side,
-              mismatch: false,
-            });
-            onUpdated?.(res.data?.data || {
-              ...assignment,
-              ...(side === "checkin"
-                ? { odoCheckInMismatch: false }
-                : { odoCheckOutMismatch: false }),
-            });
-          }
-          return;
-        }
-        const value = Number(parsed);
-        setReading(value);
-        setOcrStatus("done");
-        const res = await flagOdoMismatch(assignment.id, {
-          side,
-          reading: value,
-        });
-        onUpdated?.(res.data?.data || {
-          ...assignment,
+  const runOcr = useCallback(async () => {
+    if (!url) return;
+    setOcrStatus("loading");
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) throw new Error("Không tải được ảnh ODO.");
+      const blob = await response.blob();
+      const parsed = await readOdoFromPhoto(blob);
+      if (!parsed) {
+        setOcrStatus("empty");
+        return;
+      }
+      const value = Number(parsed);
+      setReading(value);
+      setOcrStatus("done");
+      const current = assignmentRef.current;
+      const res = await flagOdoMismatch(current.id, {
+        side,
+        reading: value,
+      });
+      onUpdatedRef.current?.(
+        res.data?.data || {
+          ...current,
           ...(side === "checkin"
             ? { odoCheckInAi: value }
             : { odoCheckOutAi: value }),
-        });
-      } catch (err) {
-        console.error(err);
-        if (!cancelled) setOcrStatus("empty");
-      }
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      setOcrStatus("empty");
     }
+  }, [side, url]);
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [aiReading, assignment.id, side, url]);
+  useEffect(() => {
+    if (aiReading != null || !url) return undefined;
+    runOcr();
+  }, [aiReading, runOcr, url]);
 
   async function handleToggle() {
     try {
@@ -144,6 +136,15 @@ export default function OdoPhotoCompare({
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
             Đọc từ ảnh: <b>{readingLabel}</b>
           </Typography>
+          {ocrStatus !== "loading" && url && (
+            <Button
+              size="small"
+              sx={{ mt: 0.5, px: 0, minWidth: 0 }}
+              onClick={runOcr}
+            >
+              Đọc lại ảnh
+            </Button>
+          )}
         </Grid>
         <Grid size={{ xs: 12, sm: 8 }}>
           {url ? (
