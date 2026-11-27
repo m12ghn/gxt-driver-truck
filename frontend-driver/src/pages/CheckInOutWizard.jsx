@@ -313,13 +313,7 @@ export default function CheckInOutWizard({ mode }) {
         payload.odoAiReading = aiVerify.reading;
       }
       if (aiVerify?.status === "ok") payload.odoAiMatch = true;
-      if (
-        aiVerify?.status === "mismatch" ||
-        aiVerify?.status === "unreadable" ||
-        aiVerify?.status === "error"
-      ) {
-        payload.odoAiMatch = false;
-      }
+      if (aiVerify?.status === "mismatch") payload.odoAiMatch = false;
 
       await sendCheckPayload(payload);
 

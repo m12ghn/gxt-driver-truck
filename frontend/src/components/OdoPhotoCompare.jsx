@@ -40,6 +40,18 @@ export default function OdoPhotoCompare({
         if (cancelled) return;
         if (!parsed) {
           setOcrStatus("empty");
+          if (mismatch) {
+            const res = await flagOdoMismatch(assignment.id, {
+              side,
+              mismatch: false,
+            });
+            onUpdated?.(res.data?.data || {
+              ...assignment,
+              ...(side === "checkin"
+                ? { odoCheckInMismatch: false }
+                : { odoCheckOutMismatch: false }),
+            });
+          }
           return;
         }
         const value = Number(parsed);
@@ -110,8 +122,11 @@ export default function OdoPhotoCompare({
         <Typography variant="subtitle2" fontWeight={700}>
           Đối chiếu ODO với ảnh đồng hồ
         </Typography>
-        {mismatch && (
+        {mismatch && reading != null && (
           <Chip size="small" color="error" label="ODO lệch ảnh" />
+        )}
+        {ocrStatus === "empty" && (
+          <Chip size="small" color="warning" label="Chưa đọc được ảnh" />
         )}
         {!mismatch && reading != null && (
           <Chip size="small" color="success" label="Khớp ảnh" />
