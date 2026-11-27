@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Box, Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { buildImageUrl } from "../utils/imageUrl";
 import { flagOdoMismatch } from "../api/assignmentApi";
+import { readOdoFromPhoto } from "../utils/odoOcr";
 
 export default function OdoPhotoCompare({
   assignment,
@@ -14,6 +16,56 @@ export default function OdoPhotoCompare({
 }) {
   const photo = photos?.manOdo;
   const url = buildImageUrl(photo);
+  const [reading, setReading] = useState(aiReading);
+  const [ocrStatus, setOcrStatus] = useState(
+    aiReading != null ? "done" : url ? "idle" : "empty"
+  );
+
+  useEffect(() => {
+    setReading(aiReading);
+    if (aiReading != null) setOcrStatus("done");
+  }, [aiReading]);
+
+  useEffect(() => {
+    if (aiReading != null || !url) return undefined;
+    let cancelled = false;
+
+    async function run() {
+      setOcrStatus("loading");
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Không tải được ảnh ODO.");
+        const blob = await response.blob();
+        const parsed = await readOdoFromPhoto(blob);
+        if (cancelled) return;
+        if (!parsed) {
+          setOcrStatus("empty");
+          return;
+        }
+        const value = Number(parsed);
+        setReading(value);
+        setOcrStatus("done");
+        const res = await flagOdoMismatch(assignment.id, {
+          side,
+          reading: value,
+        });
+        onUpdated?.(res.data?.data || {
+          ...assignment,
+          ...(side === "checkin"
+            ? { odoCheckInAi: value }
+            : { odoCheckOutAi: value }),
+        });
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setOcrStatus("empty");
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [aiReading, assignment.id, side, url]);
 
   async function handleToggle() {
     try {
@@ -21,13 +73,27 @@ export default function OdoPhotoCompare({
         side,
         mismatch: !mismatch,
       });
-      onUpdated?.(res.data?.data || { ...assignment, ...(side === "checkin"
-        ? { odoCheckInMismatch: !mismatch }
-        : { odoCheckOutMismatch: !mismatch }) });
+      onUpdated?.(
+        res.data?.data || {
+          ...assignment,
+          ...(side === "checkin"
+            ? { odoCheckInMismatch: !mismatch }
+            : { odoCheckOutMismatch: !mismatch }),
+        }
+      );
     } catch (err) {
       alert(err.response?.data?.message || "Không gắn cờ được.");
     }
   }
+
+  const readingLabel =
+    ocrStatus === "loading"
+      ? "Đang đọc..."
+      : reading != null
+        ? reading
+        : ocrStatus === "empty"
+          ? "Không đọc được"
+          : "-";
 
   return (
     <Box
@@ -47,7 +113,7 @@ export default function OdoPhotoCompare({
         {mismatch && (
           <Chip size="small" color="error" label="ODO lệch ảnh" />
         )}
-        {!mismatch && aiReading != null && (
+        {!mismatch && reading != null && (
           <Chip size="small" color="success" label="Khớp ảnh" />
         )}
       </Stack>
@@ -61,7 +127,7 @@ export default function OdoPhotoCompare({
             {odo ?? "-"}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            Đọc từ ảnh: <b>{aiReading ?? "-"}</b>
+            Đọc từ ảnh: <b>{readingLabel}</b>
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, sm: 8 }}>

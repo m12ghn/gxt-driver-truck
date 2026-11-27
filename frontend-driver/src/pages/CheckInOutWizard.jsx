@@ -256,11 +256,13 @@ export default function CheckInOutWizard({ mode }) {
     overrideAi = aiOverride
   ) {
     if (aiVerify?.status === "loading") {
-      alert("Đợi AI đọc ảnh ODO xong rồi gửi.");
+      alert("Đợi hệ thống đọc ảnh ODO xong rồi gửi.");
       return;
     }
     if (
-      (aiVerify?.status === "mismatch" || aiVerify?.status === "unreadable") &&
+      (aiVerify?.status === "mismatch" ||
+        aiVerify?.status === "unreadable" ||
+        aiVerify?.status === "error") &&
       !overrideAi
     ) {
       setOdoAlert({
@@ -311,7 +313,11 @@ export default function CheckInOutWizard({ mode }) {
         payload.odoAiReading = aiVerify.reading;
       }
       if (aiVerify?.status === "ok") payload.odoAiMatch = true;
-      if (aiVerify?.status === "mismatch" || aiVerify?.status === "unreadable") {
+      if (
+        aiVerify?.status === "mismatch" ||
+        aiVerify?.status === "unreadable" ||
+        aiVerify?.status === "error"
+      ) {
         payload.odoAiMatch = false;
       }
 
