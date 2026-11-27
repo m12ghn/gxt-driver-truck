@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Button, Chip, Grid, Stack, Typography } from "@mui/material";
 import { buildImageUrl } from "../utils/imageUrl";
 import { flagOdoMismatch } from "../api/assignmentApi";
-import { readOdoFromPhoto } from "../utils/odoOcr";
+import { isReliableOdoReading, readOdoFromPhoto } from "../utils/odoOcr";
 
 export default function OdoPhotoCompare({
   assignment,
@@ -22,13 +22,21 @@ export default function OdoPhotoCompare({
   );
   const assignmentRef = useRef(assignment);
   const onUpdatedRef = useRef(onUpdated);
+  const mismatchRef = useRef(mismatch);
+  const triedRef = useRef(false);
   assignmentRef.current = assignment;
   onUpdatedRef.current = onUpdated;
+  mismatchRef.current = mismatch;
 
   useEffect(() => {
-    setReading(aiReading);
-    if (aiReading != null) setOcrStatus("done");
-  }, [aiReading]);
+    if (aiReading != null && isReliableOdoReading(aiReading, odo)) {
+      setReading(aiReading);
+      setOcrStatus("done");
+      return;
+    }
+    setReading(null);
+    if (aiReading != null) setOcrStatus("idle");
+  }, [aiReading, odo]);
 
   const runOcr = useCallback(async () => {
     if (!url) return;
@@ -39,9 +47,28 @@ export default function OdoPhotoCompare({
       });
       if (!response.ok) throw new Error("Không tải được ảnh ODO.");
       const blob = await response.blob();
-      const parsed = await readOdoFromPhoto(blob);
-      if (!parsed) {
+      const parsed = await readOdoFromPhoto(blob, odo);
+      if (!parsed || !isReliableOdoReading(parsed, odo)) {
         setOcrStatus("empty");
+        setReading(null);
+        const current = assignmentRef.current;
+        if (
+          mismatchRef.current ||
+          current.odoCheckInAi != null ||
+          current.odoCheckOutAi != null
+        ) {
+          await flagOdoMismatch(current.id, {
+            side,
+            mismatch: false,
+            reading: null,
+          });
+          onUpdatedRef.current?.({
+            ...current,
+            ...(side === "checkin"
+              ? { odoCheckInAi: null, odoCheckInMismatch: false }
+              : { odoCheckOutAi: null, odoCheckOutMismatch: false }),
+          });
+        }
         return;
       }
       const value = Number(parsed);
@@ -64,12 +91,14 @@ export default function OdoPhotoCompare({
       console.error(err);
       setOcrStatus("empty");
     }
-  }, [side, url]);
+  }, [odo, side, url]);
 
   useEffect(() => {
-    if (aiReading != null || !url) return undefined;
+    if (!url || triedRef.current) return undefined;
+    if (isReliableOdoReading(aiReading, odo)) return undefined;
+    triedRef.current = true;
     runOcr();
-  }, [aiReading, runOcr, url]);
+  }, [aiReading, odo, runOcr, url]);
 
   async function handleToggle() {
     try {
@@ -140,7 +169,10 @@ export default function OdoPhotoCompare({
             <Button
               size="small"
               sx={{ mt: 0.5, px: 0, minWidth: 0 }}
-              onClick={runOcr}
+              onClick={() => {
+                triedRef.current = true;
+                runOcr();
+              }}
             >
               Đọc lại ảnh
             </Button>

@@ -11,6 +11,24 @@ function odoValuesMatch(entered, read) {
   return a === b;
 }
 
+export function isReliableOdoReading(reading, entered) {
+  const read = normalizeOdoDigits(reading);
+  if (read.length < 4 || read.length > 6) return false;
+  const ones = [...read].filter((digit) => digit === "1").length;
+  if (ones >= Math.ceil(read.length * 0.6)) return false;
+
+  const enteredDigits = normalizeOdoDigits(entered);
+  if (!enteredDigits) return true;
+  if (read.length !== enteredDigits.length) return false;
+
+  const readNum = Number(read);
+  const enteredNum = Number(enteredDigits);
+  if (!Number.isFinite(readNum) || !Number.isFinite(enteredNum) || enteredNum <= 0) {
+    return true;
+  }
+  return readNum >= enteredNum * 0.5 && readNum <= enteredNum * 1.5;
+}
+
 function looksLikeClock(digits) {
   if (digits.length !== 4) return false;
   const hours = Number(digits.slice(0, 2));
@@ -280,7 +298,7 @@ function classifyDigit(pixels, width, box) {
       best = digit;
     }
   }
-  if (bestScore < 0.58) return null;
+  if (bestScore < 0.68) return null;
   return best;
 }
 
@@ -313,7 +331,7 @@ function readDigitsFromBinary(canvas) {
     }
   }
 
-  const digits = [];
+  const boxes = [];
   for (const run of runs) {
     const w = run.x1 - run.x0 + 1;
     if (w < 4) continue;
@@ -328,12 +346,21 @@ function readDigitsFromBinary(canvas) {
     }
     const h = maxY - minY + 1;
     if (h < height * 0.28 || h > height * 0.98) continue;
-    const digit = classifyDigit(data, width, {
-      x: run.x0,
-      y: minY,
-      w,
-      h,
-    });
+    boxes.push({ x: run.x0, y: minY, w, h, cy: minY + h / 2 });
+  }
+
+  if (boxes.length < 3) return null;
+  const heights = boxes.map((box) => box.h).sort((a, b) => a - b);
+  const medianH = heights[Math.floor(heights.length / 2)];
+  const row = boxes.filter(
+    (box) =>
+      Math.abs(box.h - medianH) <= medianH * 0.28 &&
+      Math.abs(box.cy - (boxes[0].cy + boxes[boxes.length - 1].cy) / 2) <=
+        medianH * 0.45
+  );
+  const digits = [];
+  for (const box of row) {
+    const digit = classifyDigit(data, width, box);
     if (digit != null) digits.push(digit);
   }
 
@@ -359,10 +386,10 @@ function odometerCrops(lcd) {
   ];
 }
 
-function pickBestReading(readings) {
+function pickBestReading(readings, entered) {
   const valid = readings
     .map((item) => normalizeOdoDigits(item))
-    .filter((item) => item.length >= 3 && item.length <= 7);
+    .filter((item) => isReliableOdoReading(item, entered));
   if (!valid.length) return null;
   const notClock = valid.filter((item) => !looksLikeClock(item));
   const pool = notClock.length ? notClock : valid;
@@ -421,7 +448,7 @@ async function tesseractStrip(canvas) {
   return parseOcrOdo(data?.text, { allowClock: true });
 }
 
-async function readOdoFromPhotoLocked(blob) {
+async function readOdoFromPhotoLocked(blob, entered) {
   const img = await loadImage(blob);
   const lcd = findLcdBox(img);
   const readings = [];
@@ -435,20 +462,29 @@ async function readOdoFromPhotoLocked(blob) {
     }
   }
 
-  const fromDigits = pickBestReading(readings);
+  const fromDigits = pickBestReading(readings, entered);
   if (fromDigits) return fromDigits;
 
   const fallbackCrop = odometerCrops(lcd)[0];
   const strip = binarizeCanvas(cropToCanvas(img, fallbackCrop, 560), true);
-  return tesseractStrip(strip);
+  const tess = await tesseractStrip(strip);
+  return isReliableOdoReading(tess, entered) ? tess : null;
 }
 
-export function readOdoFromPhoto(blob) {
+export function readOdoFromPhoto(blob, entered) {
   const job = ocrQueue.then(
     () =>
-      withTimeout(readOdoFromPhotoLocked(blob), 15000, "Đọc ảnh ODO quá lâu."),
+      withTimeout(
+        readOdoFromPhotoLocked(blob, entered),
+        15000,
+        "Đọc ảnh ODO quá lâu."
+      ),
     () =>
-      withTimeout(readOdoFromPhotoLocked(blob), 15000, "Đọc ảnh ODO quá lâu.")
+      withTimeout(
+        readOdoFromPhotoLocked(blob, entered),
+        15000,
+        "Đọc ảnh ODO quá lâu."
+      )
   );
   ocrQueue = job.then(
     () => {},

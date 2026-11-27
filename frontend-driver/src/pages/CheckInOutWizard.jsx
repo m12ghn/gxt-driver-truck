@@ -23,7 +23,11 @@ import DirectionsIcon from "@mui/icons-material/Directions";
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
 import { driverCheckIn, driverCheckOut, getTodayAssignment } from "../api/assignmentApi";
-import { compareEnteredOdo, readOdoFromPhoto } from "../utils/odoOcr";
+import {
+  compareEnteredOdo,
+  isReliableOdoReading,
+  readOdoFromPhoto,
+} from "../utils/odoOcr";
 import { uploadErrorMessage } from "../utils/compressImage";
 import { uploadDriverPhotos } from "../utils/uploadPhoto";
 import {
@@ -144,8 +148,8 @@ export default function CheckInOutWizard({ mode }) {
       message: "Đang đọc số trên ảnh ODO...",
     });
     try {
-      const reading = await readOdoFromPhoto(photos.manOdo);
-      if (!reading) {
+      const reading = await readOdoFromPhoto(photos.manOdo, odo);
+      if (!reading || !isReliableOdoReading(reading, odo)) {
         const message =
           "Không đọc được số trên ảnh ODO. Hãy chụp gần, rõ số, tránh phản quang rồi thử lại.";
         setAiVerify({
