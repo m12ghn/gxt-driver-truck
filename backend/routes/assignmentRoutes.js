@@ -6,7 +6,6 @@ const driverPortalController = require("../controllers/driverPortalController");
 const {
   makeUploader,
   makeIncidentUploader,
-  makeOdoVerifyUploader,
   optionalMultipart,
 } = require("../middlewares/uploadDriverPhotos");
 const attachUser = require("../middlewares/attachUser");
@@ -25,13 +24,6 @@ router.use(requireDriverPortalAuth, attachUser);
 // Driver - Lấy phân công hôm nay
 // ==============================
 router.get("/today/:msnv", driverSelfOnly, assignmentController.getTodayAssignment);
-
-router.post(
-  "/verify-odo",
-  requireDriverPortalAuth,
-  makeOdoVerifyUploader(),
-  driverPortalController.verifyOdoPhoto
-);
 
 // ==============================
 // Driver Portal - Lịch sử chuyến

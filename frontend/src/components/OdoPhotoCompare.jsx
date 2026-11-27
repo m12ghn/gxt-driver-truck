@@ -45,10 +45,10 @@ export default function OdoPhotoCompare({
           Đối chiếu ODO với ảnh đồng hồ
         </Typography>
         {mismatch && (
-          <Chip size="small" color="error" label="AI: ODO lệch ảnh" />
+          <Chip size="small" color="error" label="ODO lệch ảnh" />
         )}
         {!mismatch && aiReading != null && (
-          <Chip size="small" color="success" label="AI khớp" />
+          <Chip size="small" color="success" label="Khớp ảnh" />
         )}
       </Stack>
 
@@ -61,7 +61,7 @@ export default function OdoPhotoCompare({
             {odo ?? "-"}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            AI đọc: <b>{aiReading ?? "-"}</b>
+            Đọc từ ảnh: <b>{aiReading ?? "-"}</b>
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, sm: 8 }}>

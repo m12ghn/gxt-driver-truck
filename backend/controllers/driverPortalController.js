@@ -26,10 +26,6 @@ const {
   validateCheckOutOdo,
   parseOdo,
 } = require("../utils/odoHelpers");
-const {
-  readOdoFromImage,
-  odoValuesMatch,
-} = require("../utils/odoVision");
 const { ensureAssignmentColumns } = require("../utils/ensureAssignmentColumns");
 
 async function resolveLocationForAssignment(assignment) {
@@ -606,67 +602,6 @@ exports.getIncidents = async (req, res) => {
     res.status(500).json({
       success: false,
       message: publicErrorMessage(err),
-    });
-  }
-};
-
-exports.verifyOdoPhoto = async (req, res) => {
-  try {
-    const odo = parseOdo(req.body?.odo);
-    const file = req.file;
-    if (odo == null) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu số ODO để đối chiếu.",
-      });
-    }
-    if (!file?.buffer) {
-      return res.status(400).json({
-        success: false,
-        message: "Thiếu ảnh màn hình ODO.",
-      });
-    }
-
-    const reading = await readOdoFromImage(file.buffer, file.mimetype);
-    if (!reading) {
-      return res.json({
-        success: true,
-        data: {
-          match: false,
-          readable: false,
-          entered: odo,
-          reading: null,
-          message:
-            "AI không đọc được số trên ảnh ODO. Hãy chụp gần, rõ số, tránh phản quang rồi thử lại.",
-        },
-      });
-    }
-
-    const match = odoValuesMatch(odo, reading);
-    return res.json({
-      success: true,
-      data: {
-        match,
-        readable: true,
-        entered: odo,
-        reading: Number(reading),
-        message: match
-          ? `AI đọc được ${reading}, khớp với số bạn nhập.`
-          : `AI đọc được ${reading}, khác số bạn nhập (${odo}). Vui lòng kiểm tra lại đồng hồ.`,
-      },
-    });
-  } catch (err) {
-    if (err.code === "NO_VISION_KEY") {
-      return res.status(503).json({
-        success: false,
-        skipped: true,
-        message: err.message,
-      });
-    }
-    console.error("verifyOdoPhoto:", err.message);
-    res.status(err.status || 500).json({
-      success: false,
-      message: publicErrorMessage(err, "AI đọc ảnh ODO thất bại. Thử chụp lại."),
     });
   }
 };

@@ -22,12 +22,8 @@ import DirectionsIcon from "@mui/icons-material/Directions";
 
 import PhotoChecklist from "../components/PhotoChecklist";
 import { PHOTO_STEPS } from "../constants/photoSteps";
-import {
-  driverCheckIn,
-  driverCheckOut,
-  getTodayAssignment,
-  verifyOdoPhoto,
-} from "../api/assignmentApi";
+import { driverCheckIn, driverCheckOut, getTodayAssignment } from "../api/assignmentApi";
+import { compareEnteredOdo, readOdoFromPhoto } from "../utils/odoOcr";
 import { uploadErrorMessage } from "../utils/compressImage";
 import { uploadDriverPhotos } from "../utils/uploadPhoto";
 import {
@@ -39,7 +35,7 @@ const MAX_DAILY_KM = 100;
 
 // step 0 : nhập số ODO
 // step 1 : chụp 6 ảnh (gồm màn ODO)
-// step 2 : AI đọc ảnh + xem lại
+// step 2 : đọc số trên ảnh + xem lại
 
 const STEP_ODO = 0;
 const STEP_PHOTOS = 1;
@@ -138,52 +134,56 @@ export default function CheckInOutWizard({ mode }) {
       setAiVerify({
         status: "unreadable",
         match: false,
-        message: "Thiếu ảnh màn hình ODO để AI đối chiếu.",
+        message: "Thiếu ảnh màn hình ODO để đối chiếu.",
       });
       return;
     }
 
-    setAiVerify({ status: "loading", message: "AI đang đọc ảnh ODO..." });
+    setAiVerify({
+      status: "loading",
+      message: "Đang đọc số trên ảnh ODO...",
+    });
     try {
-      const res = await verifyOdoPhoto(photos.manOdo, odo);
-      const data = res.data?.data || {};
-      if (data.match) {
+      const reading = await readOdoFromPhoto(photos.manOdo);
+      if (!reading) {
+        const message =
+          "Không đọc được số trên ảnh ODO. Hãy chụp gần, rõ số, tránh phản quang rồi thử lại.";
+        setAiVerify({
+          status: "unreadable",
+          match: false,
+          reading: null,
+          message,
+        });
+        setOdoAlert({ type: "ai", message });
+        return;
+      }
+
+      const { match } = compareEnteredOdo(odo, reading);
+      if (match) {
         setAiVerify({
           status: "ok",
           match: true,
-          reading: data.reading,
-          message: data.message,
+          reading: Number(reading),
+          message: `Đọc được ${reading}, khớp với số bạn nhập.`,
         });
         setAiOverride(false);
         return;
       }
+
+      const message = `Đọc được ${reading}, khác số bạn nhập (${odo}). Vui lòng kiểm tra lại đồng hồ.`;
       setAiVerify({
-        status: data.readable === false ? "unreadable" : "mismatch",
+        status: "mismatch",
         match: false,
-        reading: data.reading,
-        message: data.message,
+        reading: Number(reading),
+        message,
       });
-      setOdoAlert({
-        type: "ai",
-        message: data.message,
-      });
+      setOdoAlert({ type: "ai", message });
     } catch (err) {
-      if (err.response?.data?.skipped || err.response?.status === 503) {
-        setAiVerify({
-          status: "skipped",
-          match: null,
-          message:
-            err.response?.data?.message ||
-            "Chưa bật AI đọc ảnh. Hệ thống bỏ qua đối chiếu lần này.",
-        });
-        return;
-      }
+      console.error(err);
       setAiVerify({
         status: "error",
         match: null,
-        message:
-          err.response?.data?.message ||
-          "AI đọc ảnh thất bại. Bạn có thể chụp lại hoặc tiếp tục.",
+        message: "Đọc ảnh thất bại. Bạn có thể chụp lại hoặc tiếp tục.",
       });
     }
   }
@@ -483,7 +483,7 @@ export default function CheckInOutWizard({ mode }) {
           )}
           {aiVerify?.status === "ok" && (
             <Alert severity="success" sx={{ mb: 2 }}>
-              {aiVerify.message || "AI xác nhận số ODO khớp ảnh."}
+              {aiVerify.message || "Số ODO khớp với ảnh."}
             </Alert>
           )}
           {(aiVerify?.status === "mismatch" ||

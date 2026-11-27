@@ -32,13 +32,6 @@ function makeIncidentUploader() {
   }).array("photos", 4);
 }
 
-function makeOdoVerifyUploader() {
-  return multer({
-    storage,
-    limits: { fileSize: 2 * 1024 * 1024 },
-  }).single("photo");
-}
-
 function optionalMultipart(uploader) {
   return (req, res, next) => {
     const contentType = req.headers["content-type"] || "";
@@ -52,7 +45,6 @@ function optionalMultipart(uploader) {
 module.exports = {
   makeUploader,
   makeIncidentUploader,
-  makeOdoVerifyUploader,
   optionalMultipart,
   PHOTO_FIELDS,
 };
